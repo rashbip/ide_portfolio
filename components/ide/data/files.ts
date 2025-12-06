@@ -5,7 +5,7 @@ export type FileType = {
   icon: string
   content: string
   language: string
-  isSpecial?: "profile" | "html-preview" | "dart-preview" | "kotlin-viewer" | "profile-html"
+  isSpecial?: "profile" | "html-preview" | "dart-preview" | "kotlin-viewer" | "profile-html" | "welcome" | "documentation" | "about"
 }
 
 export const files: FileType[] = [

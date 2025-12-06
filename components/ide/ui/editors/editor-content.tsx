@@ -21,9 +21,108 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
   const [previewHtml, setPreviewHtml] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const codeContainerRef = useRef<HTMLDivElement>(null)
-  const { addTerminalOutput, setTerminalTab } = useContext(IDEContext)
+  const { addTerminalOutput, setTerminalTab, updateFileContent } = useContext(IDEContext)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const { settings } = useEditorSettings()
+
+  // Special Page Rendering
+  if (file.isSpecial === "welcome") {
+     return (
+        <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center space-y-6 overflow-auto bg-background">
+           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">Welcome to rashbip OS</h1>
+           <p className="max-w-md text-muted-foreground">
+             An advanced web-based IDE simulation. Not valid for production use, but perfect for exploring code in a safe sandbox.
+           </p>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl mt-8">
+              <div className="p-4 bg-secondary/30 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer group">
+                 <div className="flex items-center gap-3 mb-2">
+                    <span className="p-2 bg-blue-500/20 text-blue-400 rounded group-hover:bg-blue-500/30 transition-colors">
+                       <Code className="w-5 h-5" />
+                    </span>
+                    <h3 className="font-semibold text-foreground">Explore Code</h3>
+                 </div>
+                 <p className="text-sm text-muted-foreground text-left">Browse the file tree to see how this portfolio is built.</p>
+              </div>
+              <div className="p-4 bg-secondary/30 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer group">
+                <div className="flex items-center gap-3 mb-2">
+                    <span className="p-2 bg-purple-500/20 text-purple-400 rounded group-hover:bg-purple-500/30 transition-colors">
+                       <Play className="w-5 h-5" />
+                    </span>
+                    <h3 className="font-semibold text-foreground">Run & Debug</h3>
+                 </div>
+                 <p className="text-sm text-muted-foreground text-left">Open HTML/JS files and hit Run to see live previews or output.</p>
+              </div>
+           </div>
+        </div>
+     )
+  }
+
+  if (file.isSpecial === "documentation") {
+     return (
+        <div className="h-full w-full p-8 overflow-auto prose prose-invert max-w-none bg-background">
+           <h1 className="text-3xl font-bold mb-4">Documentation</h1>
+           <p className="text-muted-foreground mb-6">Welcome to the <strong>rashbip OS</strong> documentation.</p>
+           
+           <h3 className="text-xl font-semibold mb-2 mt-6">Key Features</h3>
+           <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+             <li><strong>File System</strong>: Virtual file system with create, read, update, delete operations.</li>
+             <li><strong>Editors</strong>: Syntax highlighting for JS, TS, HTML, CSS, Dart, Kotlin.</li>
+             <li><strong>Terminal</strong>: Simulated shell with commands like <code>ls</code>, <code>pwd</code>, <code>matrix</code>.</li>
+             <li><strong>Preview</strong>: Live HTML/CSS/JS preview engine.</li>
+           </ul>
+
+           <h3 className="text-xl font-semibold mb-2 mt-6">Shortcuts</h3>
+           <div className="border border-border rounded-lg overflow-hidden">
+             <table className="w-full text-left text-sm">
+               <thead className="bg-muted/50">
+                 <tr className="border-b border-border">
+                   <th className="py-2 px-4 font-medium">Key</th>
+                   <th className="py-2 px-4 font-medium">Action</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-border">
+                 <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">Ctrl+P</kbd></td><td className="py-2 px-4 text-muted-foreground">Quick File Search</td></tr>
+                 <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">F5</kbd></td><td className="py-2 px-4 text-muted-foreground">Start Debugging</td></tr>
+                 <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">Ctrl+`</kbd></td><td className="py-2 px-4 text-muted-foreground">Toggle Terminal</td></tr>
+               </tbody>
+             </table>
+           </div>
+        </div>
+     )
+  }
+
+  if (file.isSpecial === "about") {
+     return (
+        <div className="h-full w-full flex flex-col items-center justify-center p-8 bg-background">
+           <div className="relative w-32 h-32 mb-6">
+              <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20 rounded-full animate-pulse"></div>
+              <div className="relative w-full h-full rounded-full border-4 border-border shadow-xl flex items-center justify-center bg-secondary text-4xl">
+                 R
+              </div>
+           </div>
+           
+           <h1 className="text-3xl font-bold mb-2">rashbip</h1>
+           <p className="text-muted-foreground mb-8">Mobile Developer • Android • Flutter</p>
+           
+           <div className="space-y-4 max-w-md w-full">
+              <div className="flex items-center justify-between p-3 bg-secondary/30 rounded border border-border">
+                 <span className="text-sm text-muted-foreground">Version</span>
+                 <span className="font-mono text-sm">1.0.0-beta</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-secondary/30 rounded border border-border">
+                 <span className="text-sm text-muted-foreground">Build</span>
+                 <span className="font-mono text-sm">2024.12.06</span>
+              </div>
+              <button 
+                onClick={() => window.open('https://github.com/rashbip', '_blank')}
+                className="w-full py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+              >
+                 <span>View on GitHub</span>
+              </button>
+           </div>
+        </div>
+     )
+  }
 
   const isCss = file.language === "css"
   const isJs = file.language === "javascript"

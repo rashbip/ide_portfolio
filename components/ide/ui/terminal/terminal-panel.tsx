@@ -19,7 +19,7 @@ type Problem = {
 type OutputEntry = {
   timestamp: string
   message: string
-  type: "info" | "success" | "error"
+  type: "info" | "success" | "error" | "warning"
 }
 
 type Props = {
@@ -687,7 +687,9 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
                       ? "text-red-500"
                       : output.type === "success"
                         ? "text-green-500"
-                        : "text-foreground"
+                        : output.type === "warning"
+                          ? "text-yellow-500"
+                          : "text-foreground"
                       }`}
                   >
                     {output.message}

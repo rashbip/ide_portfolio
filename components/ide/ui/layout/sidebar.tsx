@@ -655,7 +655,11 @@ export function Sidebar({ activeView, files, openFile, activeFile, onDeleteFile,
                 className="w-full px-3 py-1.5 text-sm text-left hover:bg-secondary flex items-center gap-2"
                 onClick={() => {
                   const path = contextMenu.item?.path || ""
-                  navigator.clipboard.writeText(path)
+                  if (navigator?.clipboard?.writeText) {
+                    navigator.clipboard.writeText(path).catch(err => console.error("Failed to copy path:", err))
+                  } else {
+                    console.log("Clipboard API unavailable, path:", path)
+                  }
                   setContextMenu(prev => ({ ...prev, visible: false }))
                 }}
               >
@@ -721,7 +725,11 @@ export function Sidebar({ activeView, files, openFile, activeFile, onDeleteFile,
                 className="w-full px-3 py-1.5 text-sm text-left hover:bg-secondary flex items-center gap-2"
                 onClick={() => {
                   const path = contextMenu.item?.path || ""
-                  navigator.clipboard.writeText(path)
+                  if (navigator?.clipboard?.writeText) {
+                    navigator.clipboard.writeText(path).catch(err => console.error("Failed to copy path:", err))
+                  } else {
+                    console.log("Clipboard API unavailable, path:", path)
+                  }
                   setContextMenu(prev => ({ ...prev, visible: false }))
                 }}
               >

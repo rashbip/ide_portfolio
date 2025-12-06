@@ -23,7 +23,7 @@ export type { FileType }
 
 type IDEContextType = {
   updateFileContent: (path: string, content: string) => void
-  addTerminalOutput: (message: string, type?: "info" | "success" | "error") => void
+  addTerminalOutput: (message: string, type?: "info" | "success" | "error" | "warning") => void
   setTerminalTab: (tab: "terminal" | "problems" | "output") => void
   activeTerminalTab: "terminal" | "problems" | "output"
   showToast: (message: string, type?: "info" | "error" | "warning" | "success") => void
@@ -91,7 +91,7 @@ export function IDE() {
   const [isResizingSidebar, setIsResizingSidebar] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [terminalOutputs, setTerminalOutputs] = useState<
-    Array<{ timestamp: string; message: string; type: "info" | "success" | "error" }>
+    Array<{ timestamp: string; message: string; type: "info" | "success" | "error" | "warning" }>
   >([{ timestamp: new Date().toLocaleTimeString(), message: "Terminal ready.", type: "info" }])
   const [activeTerminalTab, setActiveTerminalTab] = useState<"terminal" | "problems" | "output">("terminal")
   const [toast, setToast] = useState<{ message: string; type: "info" | "error" | "warning" | "success" } | null>(null)
@@ -575,7 +575,7 @@ export function IDE() {
     setFileContents((prev) => ({ ...prev, [path]: content }))
   }
 
-  const addTerminalOutput = (message: string, type: "info" | "success" | "error" = "info") => {
+  const addTerminalOutput = (message: string, type: "info" | "success" | "error" | "warning" = "info") => {
     const timestamp = new Date().toLocaleTimeString()
     setTerminalOutputs((prev) => [...prev, { timestamp, message, type }])
   }
@@ -640,23 +640,146 @@ export function IDE() {
     )
   }
 
+  // Run functionality
+  const handleRun = (debugMode = false) => {
+    if (!activeFile) return
+
+    const ext = activeFile.name.split('.').pop()?.toLowerCase() || ''
+    
+    // Clear output if fresh run/debug
+    // No need to clear all outputs, maybe just a separator?
+    if (debugMode) {
+      addTerminalOutput(`--- Debugging ${activeFile.name} ---`, "info")
+    } else {
+      addTerminalOutput(`--- Running ${activeFile.name} ---`, "info")
+    }
+
+    // Always show terminal and switch to output for feedback/errors
+    setTerminalOpen(true)
+    setActiveTerminalTab("output")
+
+    // HTML / Web Preview
+    // For HTML, "Run" and "Debug" means "Show me the result"
+    if (ext === 'html' || ext === 'htm') {
+      
+      // Auto-open preview tab logic
+      // We need to create a special file type for preview if not exists, or just open the existing logic
+      // But we can simplify: just use openFile with a special crafted file object that triggers the preview component
+      
+      // Check if this specific file's preview is already open? 
+      // Current architecture has 'profile-html' as a special key. 
+      // We can create a dynamic preview.
+      
+      const previewFile: FileType = {
+        name: `Preview: ${activeFile.name}`,
+        path: `${activeFile.path}.preview`,
+        content: activeFile.content, // Pass content though usually preview reads from source
+        language: 'html',
+        icon: 'html',
+        isSpecial: 'html-preview' // This triggers the HTMLPreview component
+      }
+      
+      handleOpenFile(previewFile)
+      
+      if (debugMode) {
+         try {
+           const parser = new DOMParser()
+           const doc = parser.parseFromString(activeFile.content, "application/xml")
+           const errorNode = doc.querySelector("parsererror")
+           if (errorNode) {
+             addTerminalOutput(`HTML Syntax Error: ${errorNode.textContent}`, "error")
+           } else {
+             addTerminalOutput("HTML Syntax OK. Rendering preview...", "success")
+           }
+         } catch (e) {
+             addTerminalOutput(`HTML Validation Error: ${e}`, "error")
+         }
+      }
+       return
+    }
+
+    // JS Execution
+    if (ext === 'js') {
+       try {
+         const logs: string[] = []
+         const errors: string[] = []
+         
+         const safeConsole = {
+           log: (...args: any[]) => {
+             const msg = args.map(String).join(' ')
+             addTerminalOutput(msg, "info")
+             logs.push(msg)
+           },
+           error: (...args: any[]) => {
+            const msg = args.map(String).join(' ')
+            addTerminalOutput(msg, "error")
+            errors.push(msg)
+           },
+           warn: (...args: any[]) => {
+            const msg = args.map(String).join(' ')
+            addTerminalOutput(msg, "warning")
+           },
+           clear: () => {}
+         }
+
+         const runCode = new Function('console', `
+            try {
+              ${activeFile.content}
+            } catch (e) {
+              console.error(e.message || e);
+            }
+         `)
+         
+         runCode(safeConsole)
+         
+         if (debugMode && errors.length === 0) {
+            addTerminalOutput("No runtime errors executed.", "success")
+         }
+         
+       } catch (e: any) {
+         addTerminalOutput(`Runtime Error: ${e.message || e}`, "error")
+       }
+       return
+    }
+
+    // CSS Validation (Simple)
+    if (ext === 'css') {
+      if (debugMode) {
+         const open = (activeFile.content.match(/\{/g) || []).length
+         const close = (activeFile.content.match(/\}/g) || []).length
+         if (open !== close) {
+           addTerminalOutput(`CSS Error: Mismatched braces (Open: ${open}, Close: ${close})`, "error")
+         } else {
+           addTerminalOutput("CSS basic checks passed.", "success")
+         }
+      } else {
+        addTerminalOutput("CSS is applied when linked to HTML. Auto-opening linked HTML not supported yet.", "warning")
+      }
+      return
+    }
+
+    addTerminalOutput(`File type .${ext} not supported for direct run.`, "warning")
+  }
+
   return (
     <EditorSettingsProvider>
       <IDEContext.Provider value={{ updateFileContent, addTerminalOutput, setTerminalTab: setActiveTerminalTab, activeTerminalTab: activeTerminalTab, showToast }}>
-      <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
-        <TitleBar 
-          files={allFiles} 
-          openFile={openFile}
-          onCreateFile={handleCreateFile}
-          onSave={handleSave}
-          onSaveAs={handleSaveAs}
-          onOpenFile={handleOpenFile}
-          onToggleSidebar={() => setSidebarOpen(prev => !prev)}
-          onToggleTerminal={() => setTerminalOpen(prev => !prev)}
-          onExit={() => setIsExited(true)}
-          activeFile={activeFile}
-          allFiles={allFiles}
-        />
+        <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
+          <TitleBar 
+            files={allFiles} 
+            openFile={openFile}
+            onCreateFile={handleCreateFile}
+            onSave={handleSave}
+            onSaveAs={handleSaveAs}
+            onOpenFile={handleOpenFile}
+            onToggleSidebar={() => setSidebarOpen(prev => !prev)}
+            onToggleTerminal={() => setTerminalOpen(prev => !prev)}
+            onExit={() => setIsExited(true)}
+            onRun={() => handleRun(false)}
+            onDebug={() => handleRun(true)}
+            activeFile={activeFile}
+            allFiles={allFiles}
+          />
 
         <div className="flex flex-1 overflow-hidden">
           <ActivityBar

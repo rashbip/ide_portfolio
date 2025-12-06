@@ -15,11 +15,13 @@ type Props = {
   onToggleSidebar: () => void
   onToggleTerminal: () => void
   onExit: () => void
+  onRun?: () => void
+  onDebug?: () => void
   activeFile: FileType | null
   allFiles: FileType[]
 }
 
-export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOpenFile, onToggleSidebar, onToggleTerminal, onExit, activeFile, allFiles }: Props) {
+export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOpenFile, onToggleSidebar, onToggleTerminal, onExit, onRun, onDebug, activeFile, allFiles }: Props) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<FileType[]>([])
@@ -41,6 +43,16 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
         e.preventDefault()
         setSearchOpen(true)
       }
+      // F5 for Run/Debug
+      if (e.key === "F5") {
+         if (e.ctrlKey) {
+            e.preventDefault()
+            onRun?.()
+         } else {
+            e.preventDefault()
+            onDebug?.()
+         }
+      }
       // Escape to close
       if (e.key === "Escape") {
         setSearchOpen(false)
@@ -50,7 +62,8 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
+  }, [onRun, onDebug])
+
 
   useEffect(() => {
     if (searchOpen && searchRef.current) {
@@ -175,12 +188,21 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
             <MenuOption 
                 label="Cut" 
                 onClick={() => {
-                  if (window.getSelection()?.toString()) {
-                    navigator.clipboard.writeText(window.getSelection()!.toString())
-                    document.execCommand('delete')
-                    showToast("Cut to clipboard")
-                  } else {
-                    showToast("Nothing selected", "warning")
+                  try {
+                     const selection = window.getSelection()?.toString()
+                     if (selection) {
+                        if (navigator?.clipboard?.writeText) {
+                           navigator.clipboard.writeText(selection).catch(err => showToast("Clipboard access error", "error"))
+                        } else {
+                           document.execCommand('copy') // Fallback
+                        }
+                        document.execCommand('delete')
+                        showToast("Cut to clipboard")
+                     } else {
+                        showToast("Nothing selected", "warning")
+                     }
+                  } catch (e) {
+                     showToast("Failed to cut", "error")
                   }
                 }} 
                 shortcut="Ctrl+X" 
@@ -189,11 +211,20 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
             <MenuOption 
                 label="Copy" 
                 onClick={() => {
-                   if (window.getSelection()?.toString()) {
-                     navigator.clipboard.writeText(window.getSelection()!.toString())
-                     showToast("Copied to clipboard")
-                   } else {
-                     showToast("Nothing selected", "warning")
+                   try {
+                     const selection = window.getSelection()?.toString()
+                     if (selection) {
+                       if (navigator?.clipboard?.writeText) {
+                          navigator.clipboard.writeText(selection).catch(err => showToast("Clipboard access error", "error"))
+                       } else {
+                          document.execCommand('copy') // Fallback
+                       }
+                       showToast("Copied to clipboard")
+                     } else {
+                       showToast("Nothing selected", "warning")
+                     }
+                   } catch (e) {
+                      showToast("Failed to copy", "error")
                    }
                 }} 
                 shortcut="Ctrl+C" 
@@ -202,8 +233,20 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
                 label="Paste" 
                 onClick={async () => {
                   try {
-                    const text = await navigator.clipboard.readText()
-                    if (text) document.execCommand('insertText', false, text)
+                    let text = ""
+                    if (navigator?.clipboard?.readText) {
+                      text = await navigator.clipboard.readText()
+                    }
+                    // If secure clipboard read fails or returns empty, standard paste might work via event, 
+                    // but programmatic paste is often restricted.
+                    if (text) {
+                       document.execCommand('insertText', false, text)
+                    } else {
+                       // Try execCommand paste as fallback (rarely works in moden browsers without user trigger loop)
+                       // document.execCommand('paste') 
+                       // actually focus should be handling paste naturally user Ctrl+V
+                       showToast("Use Ctrl+V to paste", "info")
+                    }
                   } catch (e) {
                     showToast("Clipboard access denied", "error")
                   }
@@ -222,22 +265,43 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
           <MenuBarItem label="Run">
             <MenuOption 
                 label="Start Debugging" 
-                onClick={() => showToast("Debugging started... (Simulation)", "success")} 
+                onClick={() => onDebug?.()} 
                 shortcut="F5" 
                 disabled={!activeFile || !/\.(js|html|dart|kt|css)$/.test(activeFile.name)}
             />
             <MenuOption 
                 label="Run Without Debugging" 
-                onClick={() => showToast("Running... (Simulation)", "success")} 
+                onClick={() => onRun?.()} 
                 shortcut="Ctrl+F5" 
                 disabled={!activeFile || !/\.(js|html|dart|kt|css)$/.test(activeFile.name)} 
             />
           </MenuBarItem>
 
           <MenuBarItem label="Help">
-            <MenuOption label="Welcome" onClick={() => showToast("Welcome to rashbip OS")} />
-            <MenuOption label="Documentation" onClick={() => window.open("https://github.com/rashbip", "_blank")} />
-            <MenuOption label="About" onClick={() => showToast("Rashbip OS v1.0.0")} />
+            <MenuOption label="Welcome" onClick={() => onOpenFile({
+              name: "Welcome",
+              path: "/welcome",
+              content: "",
+              language: "markdown",
+              icon: "info",
+              isSpecial: "welcome" 
+            })} />
+            <MenuOption label="Documentation" onClick={() => onOpenFile({
+               name: "Documentation",
+               path: "/documentation",
+               content: "",
+               language: "markdown",
+               icon: "book",
+               isSpecial: "documentation"
+            })} />
+            <MenuOption label="About" onClick={() => onOpenFile({
+               name: "About",
+               path: "/about",
+               content: "", 
+               language: "markdown",
+               icon: "info",
+               isSpecial: "about"
+            })} />
           </MenuBarItem>
         </div>
 
