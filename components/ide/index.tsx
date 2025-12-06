@@ -52,6 +52,7 @@ export function IDE() {
   >([{ timestamp: new Date().toLocaleTimeString(), message: "Terminal ready.", type: "info" }])
   const [activeTerminalTab, setActiveTerminalTab] = useState<"terminal" | "problems" | "output">("terminal")
   const [toast, setToast] = useState<{ message: string; type: "info" | "error" | "warning" | "success" } | null>(null)
+  const [isExited, setIsExited] = useState(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
 
   const activityBarRef = useRef<HTMLDivElement>(null)
@@ -182,11 +183,51 @@ export function IDE() {
     return fileContents[file.path] ?? file.content
   }
 
+  const handleTerminalCommand = (command: string) => {
+    if (command === "exit") {
+      setIsExited(true)
+      setSidebarOpen(false)
+    } else if (command === "code" || command === "enter") {
+      if (isExited) {
+        setIsExited(false)
+        setSidebarOpen(true)
+        setTerminalOpen(true)
+        // Restore default files
+        if (openFiles.length === 0) {
+          setOpenFiles([initialFiles[0]])
+          setActiveFile(initialFiles[0])
+        }
+      }
+    }
+  }
+
   if (!mounted) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
         <div className="animate-pulse-slow text-muted-foreground">Loading IDE...</div>
       </div>
+    )
+  }
+
+  // If exited, show only full-screen terminal
+  if (isExited) {
+    return (
+      <IDEContext.Provider value={{ updateFileContent, addTerminalOutput, setTerminalTab: setActiveTerminalTab, activeTerminalTab: activeTerminalTab, showToast }}>
+        <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
+          <div className="h-full flex flex-col">
+            <TerminalPanel
+              onClose={() => {}}
+              height={window.innerHeight}
+              onHeightChange={() => {}}
+              outputs={terminalOutputs}
+              activeTab={activeTerminalTab}
+              onTabChange={setActiveTerminalTab}
+              onClearOutputs={() => setTerminalOutputs([])}
+              onCommand={handleTerminalCommand}
+            />
+          </div>
+        </div>
+      </IDEContext.Provider>
     )
   }
 
@@ -292,6 +333,7 @@ export function IDE() {
                   activeTab={activeTerminalTab}
                   onTabChange={setActiveTerminalTab}
                   onClearOutputs={() => setTerminalOutputs([])}
+                  onCommand={handleTerminalCommand}
                 />
               )}
             </div>

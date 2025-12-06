@@ -30,9 +30,10 @@ type Props = {
   activeTab: "terminal" | "problems" | "output"
   onTabChange: (tab: "terminal" | "problems" | "output") => void
   onClearOutputs?: () => void
+  onCommand?: (command: string) => void
 }
 
-export function TerminalPanel({ onClose, height, onHeightChange, outputs: externalOutputs, activeTab, onTabChange, onClearOutputs }: Props) {
+export function TerminalPanel({ onClose, height, onHeightChange, outputs: externalOutputs, activeTab, onTabChange, onClearOutputs, onCommand }: Props) {
   const [isResizing, setIsResizing] = useState(false)
   const [sessions, setSessions] = useState<{ id: string; name: string; history: HistoryEntry[] }[]>([
     {
@@ -395,9 +396,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
         return <div className="text-green-500">Entering the matrix...</div>
 
       case "exit":
-        // remove session
-        handleRemoveSession(activeSessionId)
-        return <div className="text-muted-foreground">Session closed.</div>
+        return <div className="text-yellow-500">Exiting IDE... Type 'code' or 'enter' to restore.</div>
 
       case "sudo":
         return <div className="text-red-500">Nice try. You don't have sudo privileges here.</div>
@@ -420,7 +419,8 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
         return <div className="text-muted-foreground">Editor not available. Use the IDE tabs instead.</div>
 
       case "code":
-        return <div className="text-muted-foreground">You're already in VS Code! Look around.</div>
+      case "enter":
+        return <div className="text-green-500">Restoring VS Code IDE...</div>
 
       case "history":
         return (
@@ -445,6 +445,9 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
     e.preventDefault()
     if (!input.trim()) return
 
+    // Propagate command to parent
+    onCommand?.(input.trim().toLowerCase())
+    
     const output = processCommand(input)
     if (output !== null || input.toLowerCase() !== "clear") {
       // Update ONLY active session
