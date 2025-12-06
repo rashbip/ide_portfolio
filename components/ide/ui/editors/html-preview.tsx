@@ -212,14 +212,14 @@ export function HtmlPreview({ content, onContentChange, defaultContent, cssConte
               <HtmlIcon className="w-4 h-4" />
               <span>HTML EDITOR</span>
             </div>
-            <div className="flex-1 flex overflow-hidden font-mono text-sm relative">
+            <div className="flex-1 flex overflow-hidden font-mono relative">
               {/* Line numbers */}
               <div
-                className="select-none text-right pr-2 pl-4 py-4 text-xs font-mono border-r border-border overflow-hidden h-full z-10 bg-background"
+                className="editor-font select-none text-right pr-2 pl-4 py-4 font-mono border-r border-border overflow-hidden h-full z-10 bg-background"
                 style={{ color: "var(--line-number)" }}
               >
                 {code.split("\n").map((_, i) => (
-                  <div key={i} className="leading-6">
+                  <div key={i} className="leading-relaxed">
                     {i + 1}
                   </div>
                 ))}
@@ -235,7 +235,7 @@ export function HtmlPreview({ content, onContentChange, defaultContent, cssConte
                     onContentChange(e.target.value)
                   }}
                   onKeyDown={handleKeyDown}
-                  className="w-full h-full p-4 bg-transparent text-foreground caret-foreground font-mono text-sm resize-none focus:outline-none leading-6 whitespace-pre"
+                  className="editor-font w-full h-full p-4 bg-transparent text-foreground caret-foreground font-mono resize-none focus:outline-none leading-relaxed whitespace-pre"
                   spellCheck={false}
                   autoCapitalize="off"
                   autoComplete="off"

@@ -1,28 +1,38 @@
 "use client"
 
 import { useState, useEffect, useRef, useContext } from "react"
-import { Search, X, Minus, Square, LayoutGrid } from "lucide-react"
+import { Search, X, Minus, Square, LayoutGrid, FileCode, FileText, Download, Upload, FolderOpen } from "lucide-react"
 import type { FileType } from "../../data/files"
-import { IDEContext } from "../../../ide"
+import { IDEContext } from "@/components/ide"
 
 type Props = {
   files: FileType[]
   openFile: (file: FileType) => void
-  onCreateFile: () => void
+  onCreateFile: (name: string, content?: string) => void
   onSave: () => void
+  onSaveAs: () => void
+  onOpenFile: (file: FileType) => void
   onToggleSidebar: () => void
   onToggleTerminal: () => void
+  onExit: () => void
   activeFile: FileType | null
+  allFiles: FileType[]
 }
 
-export function TitleBar({ files, openFile, onCreateFile, onSave, onToggleSidebar, onToggleTerminal, activeFile }: Props) {
+export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOpenFile, onToggleSidebar, onToggleTerminal, onExit, activeFile, allFiles }: Props) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<FileType[]>([])
+  const [newFileDialogOpen, setNewFileDialogOpen] = useState(false)
+  const [openFileDialogOpen, setOpenFileDialogOpen] = useState(false)
+  const [newFileName, setNewFileName] = useState("")
   const searchRef = useRef<HTMLInputElement>(null)
+  const newFileInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { showToast } = useContext(IDEContext)
   
   const isReadOnly = activeFile?.isSpecial && activeFile.isSpecial !== "html-preview" && activeFile.isSpecial !== "dart-preview"
+  const canSave = activeFile && !isReadOnly && (activeFile.language === "html" || activeFile.language === "css" || activeFile.language === "javascript" || activeFile.language === "dart")
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -135,13 +145,13 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onToggleSideba
           </button>
 
           <MenuBarItem label="File">
-            <MenuOption label="New File" onClick={onCreateFile} shortcut="Ctrl+N" />
-            <MenuOption label="Open File..." onClick={() => showToast("File picker not supported in browser", "warning")} shortcut="Ctrl+O" />
+            <MenuOption label="New File..." onClick={() => setNewFileDialogOpen(true)} shortcut="Ctrl+N" />
+            <MenuOption label="Open File..." onClick={() => fileInputRef.current?.click()} shortcut="Ctrl+O" />
             <div className="h-px bg-border my-1" />
-            <MenuOption label="Save" onClick={onSave} shortcut="Ctrl+S" />
-            <MenuOption label="Save As..." onClick={() => showToast("Save As not supported", "warning")} shortcut="Ctrl+Shift+S" />
+            <MenuOption label="Save" onClick={onSave} shortcut="Ctrl+S" disabled={!canSave} />
+            <MenuOption label="Save As..." onClick={onSaveAs} shortcut="Ctrl+Shift+S" />
             <div className="h-px bg-border my-1" />
-            <MenuOption label="Exit" onClick={() => window.location.reload()} />
+            <MenuOption label="Exit" onClick={onExit} />
           </MenuBarItem>
 
           <MenuBarItem label="Edit">
@@ -312,6 +322,113 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onToggleSideba
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden file input for Open File */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".html,.css,.js,.dart"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) {
+            const reader = new FileReader()
+            reader.onload = (event) => {
+              const content = event.target?.result as string
+              const ext = file.name.split('.').pop()?.toLowerCase() || ''
+              let language = 'plaintext'
+              let icon = 'web'
+              let isSpecial: 'html-preview' | 'dart-preview' | undefined
+              
+              if (ext === 'html') { language = 'html'; icon = 'html'; isSpecial = 'html-preview' }
+              else if (ext === 'css') { language = 'css'; icon = 'css' }
+              else if (ext === 'js') { language = 'javascript'; icon = 'js' }
+              else if (ext === 'dart') { language = 'dart'; icon = 'dart'; isSpecial = 'dart-preview' }
+              
+              const newFile: FileType = {
+                name: file.name,
+                path: `/${file.name}`,
+                icon,
+                content,
+                language,
+                isSpecial
+              }
+              onOpenFile(newFile)
+              showToast(`Opened ${file.name}`, 'success')
+            }
+            reader.readAsText(file)
+          }
+          e.target.value = ''
+        }}
+      />
+
+      {/* New File Dialog */}
+      {newFileDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-lg shadow-2xl w-96 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-4 py-3 border-b border-border bg-secondary/50">
+              <h3 className="text-sm font-semibold text-foreground">Create New File</h3>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-2">File Name</label>
+                <input
+                  ref={newFileInputRef}
+                  type="text"
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  placeholder="e.g., script.js, styles.css, main.dart"
+                  className="w-full px-3 py-2 bg-input border border-border rounded text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newFileName.trim()) {
+                      onCreateFile(newFileName.trim())
+                      setNewFileName('')
+                      setNewFileDialogOpen(false)
+                    } else if (e.key === 'Escape') {
+                      setNewFileName('')
+                      setNewFileDialogOpen(false)
+                    }
+                  }}
+                />
+              </div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Supported types:</strong></p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded">.html</span>
+                  <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">.css</span>
+                  <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">.js</span>
+                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">.dart</span>
+                </div>
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-border bg-secondary/30 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setNewFileName('')
+                  setNewFileDialogOpen(false)
+                }}
+                className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newFileName.trim()) {
+                    onCreateFile(newFileName.trim())
+                    setNewFileName('')
+                    setNewFileDialogOpen(false)
+                  }
+                }}
+                disabled={!newFileName.trim()}
+                className="px-3 py-1.5 text-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Create
+              </button>
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef, useContext } from "react"
 import { Play, RotateCcw, Code, Eye, Split, Smartphone, Monitor, Tablet, ExternalLink } from "lucide-react"
-import { IDEContext } from "../../../ide"
+import { IDEContext } from "../../index"
 
 type Props = {
   content: string
@@ -211,11 +211,11 @@ export function DartPreview({ content, onContentChange, defaultContent }: Props)
             <div className="flex-1 flex overflow-hidden">
               {/* Line numbers */}
               <div
-                className="select-none text-right pr-2 pl-4 py-4 text-xs font-mono border-r border-border overflow-y-auto"
+                className="editor-font select-none text-right pr-2 pl-4 py-4 font-mono border-r border-border overflow-y-auto"
                 style={{ color: "var(--line-number)" }}
               >
                 {code.split("\n").map((_, i) => (
-                  <div key={i} className="leading-6">
+                  <div key={i} className="leading-relaxed">
                     {i + 1}
                   </div>
                 ))}
@@ -223,7 +223,7 @@ export function DartPreview({ content, onContentChange, defaultContent }: Props)
               {/* Editor with highlighting overlay */}
               <div className="flex-1 relative overflow-auto" ref={editorRef}>
                 {/* Highlighted code (background) */}
-                <pre className="absolute inset-0 p-4 font-mono text-sm pointer-events-none min-w-max">
+                <pre className="editor-font absolute inset-0 p-4 font-mono pointer-events-none min-w-max">
                   <code>{highlightDart(code)}</code>
                 </pre>
                 {/* Textarea (foreground, transparent text) */}
@@ -234,7 +234,7 @@ export function DartPreview({ content, onContentChange, defaultContent }: Props)
                     onContentChange(e.target.value)
                   }}
                   onKeyDown={handleKeyDown}
-                  className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent caret-foreground font-mono text-sm resize-none focus:outline-none leading-6 min-w-max"
+                  className="editor-font absolute inset-0 w-full h-full p-4 bg-transparent text-transparent caret-foreground font-mono resize-none focus:outline-none leading-relaxed min-w-max"
                   spellCheck={false}
                   placeholder="Write your Dart/Flutter code here..."
                   style={{ minHeight: `${code.split("\n").length * 24 + 32}px` }}

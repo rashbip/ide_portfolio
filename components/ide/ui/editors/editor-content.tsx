@@ -1,10 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef, useEffect, useContext } from "react"
+import { useState, useRef, useEffect, useContext, useCallback } from "react"
 import type { FileType } from "../../data/files"
 import { Play, Split, Eye, Code, RotateCcw, ArrowLeft } from "lucide-react"
 import { IDEContext } from "../../../ide"
+import { useEditorSettings } from "../../context/editor-settings-context"
 
 type Props = {
   file: FileType
@@ -19,15 +20,19 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
   const [view, setView] = useState<"code" | "split" | "preview">(previewTemplate ? "split" : "code")
   const [previewHtml, setPreviewHtml] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const codeContainerRef = useRef<HTMLDivElement>(null)
   const { addTerminalOutput, setTerminalTab } = useContext(IDEContext)
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const { settings } = useEditorSettings()
 
   const isCss = file.language === "css"
   const isJs = file.language === "javascript"
 
   const [isMobile, setIsMobile] = useState(false)
-
-  // ... refs ...
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const hasUnsavedChanges = useRef(false)
+  const [scrollTop, setScrollTop] = useState(0)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -41,6 +46,58 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
+
+  // Sync scroll for minimap
+  useEffect(() => {
+    const container = codeContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      setScrollTop(container.scrollTop)
+    }
+
+    container.addEventListener("scroll", handleScroll)
+    return () => container.removeEventListener("scroll", handleScroll)
+  }, [view, previewTemplate])
+
+  // Autosave functionality - saves every 2 minutes when enabled and changes exist
+  useEffect(() => {
+    if (!settings.autoSave || !onContentChange) {
+      return
+    }
+
+    // Clear existing timer on new changes
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+
+    // Only start timer if there are unsaved changes
+    if (hasUnsavedChanges.current) {
+      autoSaveTimerRef.current = setTimeout(() => {
+        if (hasUnsavedChanges.current) {
+          onContentChange(code)
+          setLastSaved(new Date())
+          hasUnsavedChanges.current = false
+          addTerminalOutput(`Auto-saved ${file.name}`, "success")
+        }
+      }, settings.autoSaveInterval)
+    }
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [code, settings.autoSave, settings.autoSaveInterval, onContentChange, file.name, addTerminalOutput])
+
+  // Reset autosave state when file changes
+  useEffect(() => {
+    hasUnsavedChanges.current = false
+    setLastSaved(null)
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+  }, [file.path])
 
   useEffect(() => {
     setCode(fileContent)
@@ -105,6 +162,7 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newCode = e.target.value
     setCode(newCode)
+    hasUnsavedChanges.current = true
     onContentChange?.(newCode)
   }
 
@@ -262,26 +320,74 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
         {/* Code Editor */}
         {(view === "code" || view === "split" || !previewTemplate) && (
           <div className={`${(view === "split" && previewTemplate) ? "w-full md:w-1/2 h-1/2 md:h-full border-b md:border-b-0 md:border-r" : "w-full h-full"} flex flex-col overflow-hidden`}>
-            <div className="flex-1 flex text-sm font-mono relative overflow-hidden">
+            <div className="flex-1 flex font-mono relative overflow-hidden">
               {/* Line numbers */}
-              <div className="select-none text-right pr-4 pl-4 py-2 border-r border-border overflow-hidden bg-background z-10" style={{ color: "var(--line-number)" }}>
-                {lines.map((_, i) => <div key={i} className="leading-6">{i + 1}</div>)}
+              <div className="editor-font select-none text-right pr-4 pl-4 py-2 border-r border-border overflow-hidden bg-background z-10" style={{ color: "var(--line-number)" }}>
+                {lines.map((_, i) => <div key={i} className="leading-relaxed">{i + 1}</div>)}
               </div>
 
               {/* Editor Content */}
-              <div className="flex-1 relative overflow-auto h-full">
+              <div ref={codeContainerRef} className="flex-1 relative overflow-auto h-full">
                 <textarea
                   ref={textareaRef}
                   value={code}
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
-                  className="w-full h-full p-2 pl-4 bg-transparent text-foreground caret-foreground font-mono text-sm resize-none focus:outline-none leading-6 whitespace-pre"
+                  className={`editor-font w-full h-full p-2 pl-4 bg-transparent text-foreground caret-foreground font-mono resize-none focus:outline-none leading-relaxed ${
+                    settings.wordWrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"
+                  }`}
+                  style={{ 
+                    overflowWrap: settings.wordWrap ? "break-word" : "normal",
+                    wordBreak: settings.wordWrap ? "break-word" : "normal"
+                  }}
                   spellCheck={false}
                   autoCapitalize="off"
                   autoComplete="off"
                 />
               </div>
+
+              {/* Minimap */}
+              {settings.minimap && !isMobile && (
+                <div className="w-[60px] bg-muted/30 border-l border-border overflow-hidden relative flex-shrink-0">
+                  <div 
+                    className="absolute inset-0 overflow-hidden minimap pointer-events-none"
+                    style={{ fontSize: "2px", lineHeight: "3px" }}
+                  >
+                    <div className="p-1 text-muted-foreground/50 select-none">
+                      {lines.slice(0, 1000).map((line, i) => (
+                        <div 
+                          key={i} 
+                          className="truncate"
+                          style={{ 
+                            height: "3px", 
+                            background: line.trim() ? "currentColor" : "transparent",
+                            opacity: line.trim() ? 0.3 : 0,
+                            marginBottom: "1px"
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {/* Viewport indicator */}
+                  <div 
+                    className="absolute left-0 right-0 bg-primary/10 border border-primary/30 rounded-sm transition-all pointer-events-none"
+                    style={{
+                      top: codeContainerRef.current 
+                        ? `${(scrollTop / (codeContainerRef.current.scrollHeight - codeContainerRef.current.clientHeight)) * 100}%` 
+                        : "0%",
+                      height: `${Math.min(40, Math.max(10, (20 / Math.max(1, lines.length)) * 100))}px`
+                    }}
+                  />
+                </div>
+              )}
             </div>
+
+            {/* Autosave indicator */}
+            {settings.autoSave && lastSaved && (
+              <div className="px-2 py-0.5 text-xs text-muted-foreground bg-muted/50 border-t border-border">
+                Auto-saved at {lastSaved.toLocaleTimeString()}
+              </div>
+            )}
           </div>
         )}
 

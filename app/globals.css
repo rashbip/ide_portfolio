@@ -35,10 +35,14 @@
   --input: oklch(0.96 0.005 260);
   --ring: oklch(0.45 0.2 250);
   --radius: 0.25rem;
+  
+  /* Editor Settings */
+  --editor-font-size: 14px;
 
   /* IDE specific colors - Light */
   --sidebar-bg: oklch(0.96 0.005 260);
-  --activity-bar: oklch(0.25 0.02 250);
+  --activity-bar: oklch(0.94 0.005 260);
+  --title-bar: oklch(0.94 0.005 260);
   --tab-active: oklch(0.98 0.005 260);
   --tab-inactive: oklch(0.94 0.005 260);
   --line-number: oklch(0.6 0.02 250);
@@ -67,8 +71,8 @@
 
   --status-bar-bg: oklch(0.45 0.2 250);
   --status-bar-fg: oklch(0.98 0.005 260);
-  --activity-bar-icon: oklch(0.95 0.02 250);
-  --activity-bar-icon-active: oklch(1 0 0);
+  --activity-bar-icon: oklch(0.4 0.02 250);
+  --activity-bar-icon-active: oklch(0.2 0 0);
 }
 
 /* Dark theme - VS Code Dark+ inspired */
@@ -96,6 +100,7 @@
   /* IDE specific colors - Dark */
   --sidebar-bg: oklch(0.12 0.005 260);
   --activity-bar: oklch(0.1 0.005 260);
+  --title-bar: oklch(0.1 0.005 260);
   --tab-active: oklch(0.16 0.005 260);
   --tab-inactive: oklch(0.12 0.005 260);
   --line-number: oklch(0.4 0.02 250);
@@ -203,6 +208,24 @@
 }
 .syntax-operator {
   color: var(--operator);
+}
+
+/* Editor styling with settings */
+.editor-font {
+  font-size: var(--editor-font-size, 14px) !important;
+  line-height: 1.6 !important;
+  -moz-tab-size: var(--editor-tab-size, 2);
+  tab-size: var(--editor-tab-size, 2);
+}
+
+.editor-tab-2 {
+  -moz-tab-size: 2;
+  tab-size: 2;
+}
+
+.editor-tab-4 {
+  -moz-tab-size: 4;
+  tab-size: 4;
 }
 
 /* Terminal cursor blink */

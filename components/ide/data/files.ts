@@ -519,4 +519,109 @@ dependencies {
     ui = auto`,
     language: "ini",
   },
+  {
+    name: ".gitignore",
+    path: "/.gitignore",
+    icon: "config",
+    content: `# Build outputs
+/build/
+/dist/
+*.apk
+*.aab
+*.ipa
+
+# Dependencies
+/node_modules/
+/.dart_tool/
+/.packages
+
+# IDE
+/.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Generated
+*.g.dart
+*.freezed.dart
+*.gr.dart
+
+# Flutter/Dart
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock`,
+    language: "gitignore",
+  },
+  {
+    name: "settings.json",
+    path: "/.ide/settings.json",
+    icon: "config",
+    content: `{
+  "editor.fontSize": 14,
+  "editor.tabSize": 2,
+  "editor.wordWrap": "on",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "prettier",
+  "terminal.integrated.fontSize": 13,
+  "workbench.colorTheme": "One Dark Pro",
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000
+}`,
+    language: "json",
+  },
+  {
+    name: "workspace.json",
+    path: "/.ide/workspace.json",
+    icon: "config",
+    content: `{
+  "name": "rashbip-portfolio",
+  "version": "1.0.0",
+  "description": "Mobile developer portfolio",
+  "author": "rashbip",
+  "projects": [
+    {
+      "name": "android-app",
+      "type": "kotlin",
+      "path": "/android"
+    },
+    {
+      "name": "flutter-app",
+      "type": "dart",
+      "path": "/flutter"
+    },
+    {
+      "name": "web",
+      "type": "html",
+      "path": "/web"
+    }
+  ],
+  "defaultProject": "web"
+}`,
+    language: "json",
+  },
+  {
+    name: "extensions.json",
+    path: "/.ide/extensions.json",
+    icon: "config",
+    content: `{
+  "recommendations": [
+    "dart-code.dart-code",
+    "dart-code.flutter",
+    "mathiasfrohlich.kotlin",
+    "vscjava.vscode-gradle",
+    "esbenp.prettier-vscode",
+    "formulahendry.code-runner"
+  ]
+}`,
+    language: "json",
+  },
 ]

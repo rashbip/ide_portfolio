@@ -108,22 +108,22 @@ Developer(
           <span>src {">"} about.kt</span>
         </div>
 
-        <div className="flex text-sm font-mono">
+        <div className="flex font-mono">
           <div
-            className="select-none text-right pr-4 pl-4 py-2 border-r border-border"
+            className="editor-font select-none text-right pr-4 pl-4 py-2 border-r border-border"
             style={{ color: "var(--line-number)" }}
           >
             {lines.map((_, i) => (
-              <div key={i} className="leading-6">
+              <div key={i} className="leading-relaxed">
                 {i + 1}
               </div>
             ))}
           </div>
 
-          <pre className="flex-1 p-2 overflow-x-auto">
+          <pre className="editor-font flex-1 p-2 overflow-x-auto">
             <code>
               {lines.map((line, i) => (
-                <div key={i} className="leading-6 hover:bg-secondary/30 px-2">
+                <div key={i} className="leading-relaxed hover:bg-secondary/30 px-2">
                   {highlightSyntax(line) || " "}
                 </div>
               ))}
