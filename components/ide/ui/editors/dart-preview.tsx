@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef, useContext } from "react"
 import { Play, RotateCcw, Code, Eye, Split, Smartphone, Monitor, Tablet, ExternalLink } from "lucide-react"
-import { IDEContext } from "../ide"
+import { IDEContext } from "../../../ide"
 
 type Props = {
   content: string

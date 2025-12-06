@@ -2,9 +2,9 @@
 
 import type React from "react"
 import { useState, useRef, useEffect, useContext } from "react"
-import type { FileType } from "../ide"
-import { Play, Split, Eye, Code, RotateCcw } from "lucide-react"
-import { IDEContext } from "../ide"
+import type { FileType } from "../../data/files"
+import { Play, Split, Eye, Code, RotateCcw, ArrowLeft } from "lucide-react"
+import { IDEContext } from "../../../ide"
 
 type Props = {
   file: FileType
@@ -25,18 +25,37 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
   const isCss = file.language === "css"
   const isJs = file.language === "javascript"
 
+  const [isMobile, setIsMobile] = useState(false)
+
+  // ... refs ...
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (mobile && view === "split") {
+        setView("code")
+      }
+    }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
   useEffect(() => {
     setCode(fileContent)
   }, [fileContent])
 
   useEffect(() => {
     if (previewTemplate && isCss) {
-      // Simple injection for CSS
-      // We replace the link tag with the style tag or append it
       let html = previewTemplate
-      if (html.includes('href="style.css"')) {
-        html = html.replace('<link rel="stylesheet" href="style.css">', `<style>${code}</style>`)
+      // More robust regex to find the style.css link tag
+      const linkRegex = /<link[^>]*href=["']style\.css["'][^>]*>/i
+
+      if (linkRegex.test(html)) {
+        html = html.replace(linkRegex, `<style>${code}</style>`)
       } else {
+        // Fallback: append to head if no link tag found
         html = html.replace('</head>', `<style>${code}</style></head>`)
       }
       setPreviewHtml(html)
@@ -49,6 +68,12 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
       addTerminalOutput(`> Injecting ${file.name} into preview...`, "info")
       // Update preview immediately handled by useEffect, just simulate terminal feedback
       setTimeout(() => addTerminalOutput("Preview updated.", "success"), 200)
+
+      if (isMobile) {
+        setView("preview")
+      } else if (view === "code") {
+        setView("split") // Open split view if currently just in code
+      }
     } else if (isJs) {
       addTerminalOutput(`> Executing ${file.name}...`, "info")
       try {
@@ -197,8 +222,18 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 min-h-[48px]">
         <div className="flex items-center gap-2">
+          {isMobile && view === "preview" && (
+            <button
+              onClick={() => setView("code")}
+              className="flex items-center gap-1.5 px-2 py-1 text-sm rounded hover:bg-muted transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Code
+            </button>
+          )}
+
           {/* If has preview, show view toggles */}
-          {previewTemplate && (
+          {previewTemplate && !isMobile && (
             <div className="flex items-center border border-border rounded overflow-hidden">
               <button onClick={() => setView("code")} className={`p-1.5 transition-colors ${view === "code" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`} title="Code only"><Code className="w-4 h-4" /></button>
               <button onClick={() => setView("split")} className={`p-1.5 transition-colors ${view === "split" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`} title="Split view"><Split className="w-4 h-4" /></button>
@@ -235,25 +270,16 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
 
               {/* Editor Content */}
               <div className="flex-1 relative overflow-auto h-full">
-                <pre className="p-2 min-h-full pointer-events-none">
-                  <code>
-                    {lines.map((line, i) => (
-                      <div key={i} className="leading-6 hover:bg-secondary/30 px-2 min-w-max">
-                        {highlightSyntax(line, file.language) || " "}
-                      </div>
-                    ))}
-                  </code>
-                </pre>
-                {isEditable && (
-                  <textarea
-                    ref={textareaRef}
-                    value={code}
-                    onChange={handleChange}
-                    onKeyDown={handleKeyDown}
-                    className="absolute inset-0 w-full h-full p-2 pl-4 bg-transparent text-transparent caret-foreground font-mono text-sm resize-none focus:outline-none leading-6 whitespace-pre"
-                    spellCheck={false}
-                  />
-                )}
+                <textarea
+                  ref={textareaRef}
+                  value={code}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                  className="w-full h-full p-2 pl-4 bg-transparent text-foreground caret-foreground font-mono text-sm resize-none focus:outline-none leading-6 whitespace-pre"
+                  spellCheck={false}
+                  autoCapitalize="off"
+                  autoComplete="off"
+                />
               </div>
             </div>
           </div>

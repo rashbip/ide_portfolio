@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { X, Maximize2, Minimize2, Plus } from "lucide-react"
+import { X, Maximize2, Minimize2, Plus, Ban, Trash2 } from "lucide-react"
 
 type HistoryEntry = {
   cmd: string
@@ -29,9 +29,10 @@ type Props = {
   outputs?: OutputEntry[]
   activeTab: "terminal" | "problems" | "output"
   onTabChange: (tab: "terminal" | "problems" | "output") => void
+  onClearOutputs?: () => void
 }
 
-export function TerminalPanel({ onClose, height, onHeightChange, outputs: externalOutputs, activeTab, onTabChange }: Props) {
+export function TerminalPanel({ onClose, height, onHeightChange, outputs: externalOutputs, activeTab, onTabChange, onClearOutputs }: Props) {
   const [isResizing, setIsResizing] = useState(false)
   const [sessions, setSessions] = useState<{ id: string; name: string; history: HistoryEntry[] }[]>([
     {
@@ -54,7 +55,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
   const [matrixMode, setMatrixMode] = useState(false)
 
   // existing problems state...
-  const [problems] = useState<Problem[]>([
+  const [problems, setProblems] = useState<Problem[]>([
     { type: "warning", message: "Unused import 'dart:async'", file: "lib/stack.dart", line: 2 },
     { type: "info", message: "Consider using 'const' constructor", file: "lib/stack.dart", line: 15 },
   ])
@@ -491,9 +492,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
   const warningCount = problems.filter((p) => p.type === "warning").length
 
   // Icon replacements
-  const Trash2 = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
-  )
+  // Icon replacements
 
   return (
     <div
@@ -572,11 +571,27 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
-              <button onClick={handleClear} className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground" title="Clear Terminal">
+              <button
+                onClick={(e) => handleRemoveSession(activeSessionId, e)}
+                className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-red-500 transition-colors"
+                title="Kill Terminal Session"
+              >
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
           )}
+
+          <button
+            onClick={() => {
+              if (activeTab === "terminal") handleClear()
+              if (activeTab === "output") onClearOutputs?.()
+              if (activeTab === "problems") setProblems([])
+            }}
+            className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground"
+            title={`Clear ${activeTab}`}
+          >
+            <Ban className="w-4 h-4" />
+          </button>
 
           <button
             onClick={() => onHeightChange(height === 200 ? 400 : 200)}
@@ -679,7 +694,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
           </div>
         )}
       </div>
-    </div>
+    </div >
   )
 }
 

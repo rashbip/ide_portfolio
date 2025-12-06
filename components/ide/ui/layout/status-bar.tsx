@@ -1,6 +1,6 @@
 "use client"
 
-import type { FileType } from "../ide"
+import type { FileType } from "../../data/files"
 import { GitBranch, Bell, Check, AlertTriangle, X } from "lucide-react"
 import { useTheme } from "next-themes"
 

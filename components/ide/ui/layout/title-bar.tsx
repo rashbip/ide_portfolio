@@ -2,14 +2,19 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Search, X, Minus, Square, LayoutGrid } from "lucide-react"
-import type { FileType } from "../ide"
+import type { FileType } from "../../data/files"
 
 type Props = {
   files: FileType[]
   openFile: (file: FileType) => void
+  onCreateFile: () => void
+  onSave: () => void
+  onToggleSidebar: () => void
+  onToggleTerminal: () => void
+  activeFile: FileType | null
 }
 
-export function TitleBar({ files, openFile }: Props) {
+export function TitleBar({ files, openFile, onCreateFile, onSave, onToggleSidebar, onToggleTerminal, activeFile }: Props) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<FileType[]>([])
@@ -55,7 +60,62 @@ export function TitleBar({ files, openFile }: Props) {
   const handleSelectFile = (file: FileType) => {
     openFile(file)
     setSearchOpen(false)
-    setSearchQuery("")
+  }
+
+  const [activeMenu, setActiveMenu] = useState<string | null>(null)
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setActiveMenu(null)
+    window.addEventListener("click", handleClickOutside)
+    return () => window.removeEventListener("click", handleClickOutside)
+  }, [])
+
+  function MenuBarItem({ label, children }: { label: string; children: React.ReactNode }) {
+    const isOpen = activeMenu === label
+
+    return (
+      <div className="relative">
+        <button
+          className={`px-2 py-1 text-xs rounded hover:bg-white/10 transition-colors ${isOpen ? "bg-white/10" : ""}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            setActiveMenu(isOpen ? null : label)
+          }}
+          onMouseEnter={() => {
+            if (activeMenu) setActiveMenu(label)
+          }}
+        >
+          {label}
+        </button>
+        {isOpen && (
+          <div className="absolute top-full left-0 mt-1 min-w-[200px] bg-popover border border-border rounded shadow-lg py-1 z-50">
+            {children}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  function MenuOption({ label, onClick, shortcut, disabled }: { label: string; onClick?: () => void; shortcut?: string; disabled?: boolean }) {
+    return (
+      <button
+        className={`w-full flex items-center justify-between px-3 py-1.5 text-xs text-left ${
+          disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-primary hover:text-primary-foreground"
+        }`}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (!disabled) {
+             onClick?.()
+             setActiveMenu(null)
+          }
+        }}
+        disabled={disabled}
+      >
+        <span>{label}</span>
+        {shortcut && <span className="text-muted-foreground ml-4">{shortcut}</span>}
+      </button>
+    )
   }
 
   return (
@@ -66,16 +126,55 @@ export function TitleBar({ files, openFile }: Props) {
       >
         {/* Left - Menu */}
         <div className="flex items-center gap-1">
-          <button className="p-1.5 rounded hover:bg-white/10 transition-colors">
+          <button className="p-1.5 rounded hover:bg-white/10 transition-colors" title="Menu">
             <LayoutGrid className="w-4 h-4 text-muted-foreground" />
           </button>
-          <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">File</span>
-          <span className="text-xs text-muted-foreground hidden sm:inline">Edit</span>
-          <span className="text-xs text-muted-foreground hidden sm:inline">View</span>
-          <span className="text-xs text-muted-foreground hidden sm:inline">Go</span>
-          <span className="text-xs text-muted-foreground hidden sm:inline">Run</span>
-          <span className="text-xs text-muted-foreground hidden sm:inline">Terminal</span>
-          <span className="text-xs text-muted-foreground hidden sm:inline">Help</span>
+
+          <MenuBarItem label="File">
+            <MenuOption label="New File" onClick={onCreateFile} shortcut="Ctrl+N" />
+            <MenuOption label="Open File..." onClick={() => alert("Open File Picker (Not implemented)")} shortcut="Ctrl+O" />
+            <div className="h-px bg-border my-1" />
+            <MenuOption label="Save" onClick={onSave} shortcut="Ctrl+S" />
+            <MenuOption label="Save As..." onClick={() => alert("Save As (Not implemented)")} shortcut="Ctrl+Shift+S" />
+            <div className="h-px bg-border my-1" />
+            <MenuOption label="Exit" onClick={() => window.location.reload()} />
+          </MenuBarItem>
+
+          <MenuBarItem label="Edit">
+            <MenuOption label="Undo" onClick={() => document.execCommand('undo')} shortcut="Ctrl+Z" />
+            <MenuOption label="Redo" onClick={() => document.execCommand('redo')} shortcut="Ctrl+Y" />
+            <div className="h-px bg-border my-1" />
+            <MenuOption label="Cut" onClick={() => navigator.clipboard.writeText(window.getSelection()?.toString() || "")} shortcut="Ctrl+X" />
+            <MenuOption label="Copy" onClick={() => navigator.clipboard.writeText(window.getSelection()?.toString() || "")} shortcut="Ctrl+C" />
+            <MenuOption label="Paste" onClick={() => navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t))} shortcut="Ctrl+V" />
+          </MenuBarItem>
+
+          <MenuBarItem label="View">
+            <MenuOption label="Command Palette" onClick={() => setSearchOpen(true)} shortcut="Ctrl+P" />
+            <MenuOption label="Explorer" onClick={onToggleSidebar} shortcut="Ctrl+Shift+E" />
+            <MenuOption label="Terminal" onClick={onToggleTerminal} shortcut="Ctrl+`" />
+          </MenuBarItem>
+
+          <MenuBarItem label="Run">
+            <MenuOption 
+                label="Start Debugging" 
+                onClick={() => alert("Start Debugging")} 
+                shortcut="F5" 
+                disabled={!activeFile || !/\.(js|html|dart|kt|css)$/.test(activeFile.name)}
+            />
+            <MenuOption 
+                label="Run Without Debugging" 
+                onClick={() => alert("Run Without Debugging")} 
+                shortcut="Ctrl+F5" 
+                disabled={!activeFile || !/\.(js|html|dart|kt|css)$/.test(activeFile.name)} 
+            />
+          </MenuBarItem>
+
+          <MenuBarItem label="Help">
+            <MenuOption label="Welcome" onClick={() => alert("Welcome Guide")} />
+            <MenuOption label="Documentation" onClick={() => window.open("https://github.com/rashbip", "_blank")} />
+            <MenuOption label="About" onClick={() => alert("Rashbip OS v1.0.0")} />
+          </MenuBarItem>
         </div>
 
         {/* Center - Search Bar */}
@@ -90,13 +189,13 @@ export function TitleBar({ files, openFile }: Props) {
 
         {/* Right - Window Controls */}
         <div className="flex items-center gap-0.5">
-          <button className="p-1.5 rounded hover:bg-white/10 transition-colors">
+          <button className="p-1.5 rounded hover:bg-white/10 transition-colors" title="Minimize">
             <Minus className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
-          <button className="p-1.5 rounded hover:bg-white/10 transition-colors">
+          <button className="p-1.5 rounded hover:bg-white/10 transition-colors" title="Maximize">
             <Square className="w-3 h-3 text-muted-foreground" />
           </button>
-          <button className="p-1.5 rounded hover:bg-red-500/80 transition-colors">
+          <button className="p-1.5 rounded hover:bg-red-500/80 transition-colors" title="Close">
             <X className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>

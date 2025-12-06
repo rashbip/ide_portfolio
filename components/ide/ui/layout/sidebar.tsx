@@ -4,7 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Moon, Sun, Monitor } from "lucide-react"
 import { useTheme } from "next-themes"
-import type { FileType } from "../ide"
+import type { FileType } from "../../data/files"
 import {
   KotlinIcon,
   DartIcon,
@@ -15,7 +15,7 @@ import {
   WebIcon,
   CssIcon,
   JsIcon,
-} from "./file-icons"
+} from "../file-icons"
 
 type Props = {
   activeView: string
@@ -44,9 +44,16 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 export function Sidebar({ activeView, files, openFile, activeFile }: Props) {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(["rashbip", "src", "lib", "build", "web"]),
-  )
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("expandedFolders")
+      if (saved) {
+        return new Set(JSON.parse(saved))
+      }
+    }
+    return new Set(["rashbip", "src", "lib", "build", "web"])
+  })
+
   const { theme, setTheme } = useTheme()
 
   const toggleFolder = (path: string) => {
@@ -57,6 +64,7 @@ export function Sidebar({ activeView, files, openFile, activeFile }: Props) {
       newExpanded.add(path)
     }
     setExpandedFolders(newExpanded)
+    localStorage.setItem("expandedFolders", JSON.stringify([...newExpanded]))
   }
 
   const getIcon = (iconName: string) => {
@@ -138,9 +146,8 @@ export function Sidebar({ activeView, files, openFile, activeFile }: Props) {
       <button
         key={fullPath}
         onClick={() => node.file && openFile(node.file)}
-        className={`file-tree-item w-full flex items-center gap-2 py-1 px-2 text-sm transition-colors ${
-          isActive ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-        }`}
+        className={`file-tree-item w-full flex items-center gap-2 py-1 px-2 text-sm transition-colors ${isActive ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
         style={{ paddingLeft: `${depth * 12 + 28}px` }}
       >
         {node.file && getIcon(node.file.icon)}
@@ -264,36 +271,33 @@ export function Sidebar({ activeView, files, openFile, activeFile }: Props) {
             <div className="space-y-4 text-sm">
               <div className="space-y-2">
                 <span className="text-muted-foreground">Color Theme</span>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setTheme("light")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded border transition-colors ${
-                      theme === "light"
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border text-muted-foreground hover:border-primary/50"
-                    }`}
+                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 px-3 py-2 rounded border transition-colors ${theme === "light"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
                   >
                     <Sun className="w-4 h-4" />
                     <span>Light</span>
                   </button>
                   <button
                     onClick={() => setTheme("dark")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded border transition-colors ${
-                      theme === "dark"
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border text-muted-foreground hover:border-primary/50"
-                    }`}
+                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 px-3 py-2 rounded border transition-colors ${theme === "dark"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
                   >
                     <Moon className="w-4 h-4" />
                     <span>Dark</span>
                   </button>
                   <button
                     onClick={() => setTheme("system")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded border transition-colors ${
-                      theme === "system"
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border text-muted-foreground hover:border-primary/50"
-                    }`}
+                    className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 px-3 py-2 rounded border transition-colors ${theme === "system"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
                   >
                     <Monitor className="w-4 h-4" />
                     <span>System</span>

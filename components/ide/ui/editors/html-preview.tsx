@@ -33,7 +33,7 @@ export function HtmlPreview({ content, onContentChange, defaultContent, cssConte
     checkMobile()
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
-  }, []) // Empty dependency array to run once on mount
+  }, [])
 
   useEffect(() => {
     if (content) {
@@ -42,10 +42,15 @@ export function HtmlPreview({ content, onContentChange, defaultContent, cssConte
   }, [content])
 
   useEffect(() => {
-    // Only auto-update preview if NOT mobile, or if we ARE viewing preview
-    if (!isMobile || view === "preview" || view === "split") {
-      updatePreview()
-    }
+    // Debounce preview update to prevent flashing
+    const timer = setTimeout(() => {
+      // Only auto-update preview if NOT mobile, or if we ARE viewing preview
+      if (!isMobile || view === "preview" || view === "split") {
+        updatePreview()
+      }
+    }, 1000)
+
+    return () => clearTimeout(timer)
   }, [code, cssContent, jsContent, isMobile, view])
 
   const updatePreview = () => {
@@ -207,10 +212,10 @@ export function HtmlPreview({ content, onContentChange, defaultContent, cssConte
               <HtmlIcon className="w-4 h-4" />
               <span>HTML EDITOR</span>
             </div>
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex overflow-hidden font-mono text-sm relative">
               {/* Line numbers */}
               <div
-                className="select-none text-right pr-2 pl-4 py-4 text-xs font-mono border-r border-border overflow-auto h-full"
+                className="select-none text-right pr-2 pl-4 py-4 text-xs font-mono border-r border-border overflow-hidden h-full z-10 bg-background"
                 style={{ color: "var(--line-number)" }}
               >
                 {code.split("\n").map((_, i) => (
@@ -219,13 +224,9 @@ export function HtmlPreview({ content, onContentChange, defaultContent, cssConte
                   </div>
                 ))}
               </div>
-              {/* Editor */}
+
+              {/* Editor Container - allowing generic scoll */}
               <div className="flex-1 relative overflow-auto h-full">
-                {/* Highlighted code background */}
-                <pre className="absolute inset-0 p-4 font-mono text-sm pointer-events-none min-h-full">
-                  <code>{highlightHtml(code)}</code>
-                </pre>
-                {/* Textarea */}
                 <textarea
                   ref={textareaRef}
                   value={code}
@@ -234,8 +235,10 @@ export function HtmlPreview({ content, onContentChange, defaultContent, cssConte
                     onContentChange(e.target.value)
                   }}
                   onKeyDown={handleKeyDown}
-                  className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent caret-foreground font-mono text-sm resize-none focus:outline-none leading-6 min-h-max"
+                  className="w-full h-full p-4 bg-transparent text-foreground caret-foreground font-mono text-sm resize-none focus:outline-none leading-6 whitespace-pre"
                   spellCheck={false}
+                  autoCapitalize="off"
+                  autoComplete="off"
                   placeholder="Write your HTML here..."
                 />
               </div>
@@ -268,7 +271,7 @@ export function HtmlPreview({ content, onContentChange, defaultContent, cssConte
         <span>Press Ctrl+Enter to run | Linked: style.css, script.js</span>
         <span>{code.length} characters</span>
       </div>
-    </div>
+    </div >
   )
 }
 

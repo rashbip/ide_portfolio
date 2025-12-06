@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useContext } from "react"
 import { Play } from "lucide-react"
-import { IDEContext } from "../ide"
+import { IDEContext } from "../../../ide"
 
 type Props = {
   content: string

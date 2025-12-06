@@ -3,8 +3,8 @@
 import type React from "react"
 
 import { X } from "lucide-react"
-import type { FileType } from "../ide"
-import { KotlinIcon, DartIcon, HtmlIcon, MarkdownIcon, GradleIcon, ConfigIcon, WebIcon } from "./file-icons"
+import type { FileType } from "../../data/files"
+import { KotlinIcon, DartIcon, HtmlIcon, MarkdownIcon, GradleIcon, ConfigIcon, WebIcon } from "../file-icons"
 
 type Props = {
   openFiles: FileType[]

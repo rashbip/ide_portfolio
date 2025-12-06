@@ -10,6 +10,7 @@ type Props = {
   setSidebarOpen: (open: boolean) => void
   terminalOpen: boolean
   setTerminalOpen: (open: boolean) => void
+  containerRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function ActivityBar({
@@ -19,6 +20,7 @@ export function ActivityBar({
   setSidebarOpen,
   terminalOpen,
   setTerminalOpen,
+  containerRef,
 }: Props) {
   const { theme, setTheme, resolvedTheme } = useTheme()
 
@@ -49,15 +51,14 @@ export function ActivityBar({
   }
 
   return (
-    <div className="w-12 flex flex-col justify-between py-2" style={{ background: "var(--activity-bar)" }}>
+    <div ref={containerRef} className="w-12 flex flex-col justify-between py-2" style={{ background: "var(--activity-bar)" }}>
       <div className="flex flex-col items-center gap-1">
         {topIcons.map(({ id, icon: Icon, label }) => (
           <button
             key={id}
             onClick={() => handleClick(id)}
-            className={`activity-icon w-10 h-10 flex items-center justify-center rounded transition-all ${
-              activeView === id && sidebarOpen ? "active" : ""
-            }`}
+            className={`activity-icon w-10 h-10 flex items-center justify-center rounded transition-all ${activeView === id && sidebarOpen ? "active" : ""
+              }`}
             title={label}
           >
             <Icon className="w-5 h-5" />
@@ -84,9 +85,8 @@ export function ActivityBar({
           <button
             key={id}
             onClick={() => handleClick(id)}
-            className={`activity-icon w-10 h-10 flex items-center justify-center rounded transition-all ${
-              activeView === id && sidebarOpen ? "active" : ""
-            }`}
+            className={`activity-icon w-10 h-10 flex items-center justify-center rounded transition-all ${activeView === id && sidebarOpen ? "active" : ""
+              }`}
             title={label}
           >
             <Icon className="w-5 h-5" />
