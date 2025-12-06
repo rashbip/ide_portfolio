@@ -1,9 +1,10 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect, useRef, useContext } from "react"
 import { Search, X, Minus, Square, LayoutGrid, FileCode, FileText, Download, Upload, FolderOpen } from "lucide-react"
 import type { FileType } from "../../data/files"
-import { IDEContext } from "@/components/ide"
+import { IDEContext } from "@/components/ide/context/ide-context"
 
 type Props = {
   files: FileType[]
@@ -320,7 +321,6 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
         </button>
 
         {/* Right - Window Controls */}
-        {/* Right - Window Controls */}
         <div className="hidden md:flex items-center gap-0.5">
           <button onClick={onMinimize} className="p-1.5 rounded hover:bg-white/10 transition-colors" title="Minimize" aria-label="Minimize">
             <Minus className="w-3.5 h-3.5 text-muted-foreground" />
@@ -355,7 +355,7 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
                 placeholder="Search files by name..."
                 className="flex-1 bg-transparent text-foreground text-sm outline-none placeholder:text-muted-foreground"
               />
-              <button onClick={() => setSearchOpen(false)} className="p-1 hover:bg-secondary rounded">
+              <button onClick={() => setSearchOpen(false)} className="p-1 hover:bg-secondary rounded" title="Close" aria-label="Close">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
@@ -400,6 +400,8 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
       <input
         ref={fileInputRef}
         type="file"
+        title="Open File"
+        aria-label="Open File"
         accept=".html,.css,.js,.dart"
         className="hidden"
         onChange={(e) => {

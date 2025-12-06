@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useContext } from "react"
 import { Play } from "lucide-react"
-import { IDEContext } from "../../../ide"
+import { IDEContext } from "../../context/ide-context"
 
 type Props = {
   content: string
@@ -83,7 +83,7 @@ Developer(
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2">
-          {/* Filename removed */}
+
         </div>
         <button
           onClick={handleRun}

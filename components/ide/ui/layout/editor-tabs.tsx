@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useRef, useEffect } from "react"
 
 import { X } from "lucide-react"
@@ -84,6 +85,8 @@ export function EditorTabs({ openFiles, activeFile, setActiveFile, closeFile }: 
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#7F52FF]/20 text-[#7F52FF]">RUN</span>
           )}
           <button
+            title="Close"
+            aria-label="Close"
             onClick={(e) => {
               e.stopPropagation()
               closeFile(file)

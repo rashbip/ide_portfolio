@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useRef, useEffect, useContext, useCallback } from "react"
 import type { FileType } from "../../data/files"
 import { Play, Split, Eye, Code, RotateCcw, ArrowLeft } from "lucide-react"
-import { IDEContext } from "../../../ide"
+import { IDEContext } from "../../context/ide-context"
 import { useEditorSettings } from "../../context/editor-settings-context"
 
 type Props = {
@@ -327,10 +327,7 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
 
   // Syntax highlighting helper (kept from original)
   const highlightSyntax = (line: string, language: string): React.ReactNode => {
-    // ... (Keep existing implementation logic mostly)
-    // For brevity in this thought process, assume I copy the huge function.
-    // In actual tool call I will include the full function.
-    if (language === "markdown") {
+      if (language === "markdown") {
       if (line.startsWith("# ")) return <span className="syntax-keyword font-bold text-lg">{line}</span>
       if (line.startsWith("## ")) return <span className="syntax-keyword font-bold">{line}</span>
       if (line.startsWith("```")) return <span className="syntax-comment">{line}</span>
@@ -399,7 +396,6 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
     }
 
     if (language === "ini") {
-      // ... (Keep existing)
       if (line.startsWith("[") && line.endsWith("]")) return <span className="syntax-keyword">{line}</span>
       if (line.includes("=")) {
         const [key, ...valueParts] = line.split("=")
@@ -481,6 +477,8 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
                   spellCheck={false}
                   autoCapitalize="off"
                   autoComplete="off"
+                  aria-label="Code editor"
+                  title="Code editor"
                 />
               </div>
 

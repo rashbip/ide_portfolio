@@ -134,15 +134,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
     "history",
   ]
 
-  // ... processCommand implementation (assume it's same, we just need to use it)
-  // Re-implementing briefly to ensure context is correct or just using the one I have in mind?
-  // Since I'm replacing the whole component body mostly, I should keep processCommand. 
-  // Wait, replace_file_content replaces a chunk. I should define processCommand here or ensure I don't delete it if I use Start/End line smartly.
-  // The previous file content has processCommand inside. I should invoke it.
-
-  // To avoid huge replacement, I will try to keep processCommand.
-  // But processCommand uses 'setHistory'. I need to update it to use 'setSessions'.
-  // So I DO need to replace processCommand or at least the part that updates history.
+  // Process commands
 
   // Let's replace the state declarations and effects first, then processCommand, then UI.
   // Actually, I can allow multiple replacements.
@@ -494,8 +486,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
   const errorCount = problems.filter((p) => p.type === "error").length
   const warningCount = problems.filter((p) => p.type === "warning").length
 
-  // Icon replacements
-  // Icon replacements
+
 
   return (
     <div
@@ -566,6 +557,8 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
                     value={activeSessionId}
                     onChange={(e) => setActiveSessionId(e.target.value)}
                     className="bg-transparent text-xs border-none outline-none py-1 px-2 cursor-pointer hover:bg-muted"
+                    title="Select Terminal Session"
+                    aria-label="Select Terminal Session"
                   >
                     {sessions.map(s => <option key={s.id} value={s.id}>{s.id}: {s.name}</option>)}
                   </select>
@@ -647,6 +640,8 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
                 autoComplete="off"
                 spellCheck={false}
                 autoFocus
+                aria-label="Terminal Input"
+                title="Terminal Input"
               />
               <span className="w-2 h-4 bg-foreground cursor-blink" />
             </form>
