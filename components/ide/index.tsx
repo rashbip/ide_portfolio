@@ -96,6 +96,7 @@ export function IDE() {
   const [activeTerminalTab, setActiveTerminalTab] = useState<"terminal" | "problems" | "output">("terminal")
   const [toast, setToast] = useState<{ message: string; type: "info" | "error" | "warning" | "success" } | null>(null)
   const [isExited, setIsExited] = useState(false)
+  const [isWindowed, setIsWindowed] = useState(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
 
   const activityBarRef = useRef<HTMLDivElement>(null)
@@ -761,10 +762,23 @@ export function IDE() {
     addTerminalOutput(`File type .${ext} not supported for direct run.`, "warning")
   }
 
+
+
+  // ... (previous functions)
+
   return (
     <EditorSettingsProvider>
       <IDEContext.Provider value={{ updateFileContent, addTerminalOutput, setTerminalTab: setActiveTerminalTab, activeTerminalTab: activeTerminalTab, showToast }}>
-        <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
+        <div className={`
+          flex flex-col overflow-hidden bg-background 
+          ${isWindowed 
+            ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vh] rounded-lg shadow-2xl border border-border resize overflow-auto'
+            : 'h-screen w-screen'
+          }
+          ${isExited ? 'hidden' : ''}
+          `}
+          style={isWindowed ? { maxWidth: '100vw', maxHeight: '100vh' } : {}}
+        >
           <TitleBar 
             files={allFiles} 
             openFile={openFile}
@@ -779,6 +793,10 @@ export function IDE() {
             onDebug={() => handleRun(true)}
             activeFile={activeFile}
             allFiles={allFiles}
+            isWindowed={isWindowed}
+            onMinimize={() => setIsWindowed(true)}
+            onMaximize={() => setIsWindowed(false)}
+            onClose={() => setIsExited(true)}
           />
 
         <div className="flex flex-1 overflow-hidden">

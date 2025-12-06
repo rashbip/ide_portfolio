@@ -61,17 +61,54 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
      return (
         <div className="h-full w-full p-8 overflow-auto prose prose-invert max-w-none bg-background">
            <h1 className="text-3xl font-bold mb-4">Documentation</h1>
-           <p className="text-muted-foreground mb-6">Welcome to the <strong>rashbip OS</strong> documentation.</p>
+           <p className="text-muted-foreground mb-6">Welcome to the <strong>rashbip OS</strong> documentation. A fully functional web-based IDE simulation.</p>
            
-           <h3 className="text-xl font-semibold mb-2 mt-6">Key Features</h3>
+           <h3 className="text-xl font-semibold mb-2 mt-6">Core Features</h3>
            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-             <li><strong>File System</strong>: Virtual file system with create, read, update, delete operations.</li>
-             <li><strong>Editors</strong>: Syntax highlighting for JS, TS, HTML, CSS, Dart, Kotlin.</li>
-             <li><strong>Terminal</strong>: Simulated shell with commands like <code>ls</code>, <code>pwd</code>, <code>matrix</code>.</li>
-             <li><strong>Preview</strong>: Live HTML/CSS/JS preview engine.</li>
+             <li><strong>Virtual File System</strong>: Create, read, update, and delete files/folders directly in the browser. Changes persist via LocalStorage.</li>
+             <li><strong>Rich Editor</strong>: Syntax highlighting for 10+ languages including JS, TS, HTML, CSS, Dart, Kotlin, Python, etc.</li>
+             <li><strong>Integrated Terminal</strong>: A simulated shell environment with a variety of built-in commands.</li>
+             <li><strong>Live Preview</strong>: Real-time HTML/CSS/JS rendering engine for web projects.</li>
+             <li><strong>Customization</strong>: Settings for font size, tab size, word wrap, minimap, and auto-save.</li>
            </ul>
 
-           <h3 className="text-xl font-semibold mb-2 mt-6">Shortcuts</h3>
+           <h3 className="text-xl font-semibold mb-2 mt-6">Terminal Commands</h3>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border border-border rounded-lg p-4 bg-secondary/10">
+                 <h4 className="font-bold mb-2 text-primary">File Operations</h4>
+                 <ul className="space-y-1 text-sm text-muted-foreground">
+                    <li><code className="text-foreground">ls</code> - List directory contents</li>
+                    <li><code className="text-foreground">cd [dir]</code> - Change directory</li>
+                    <li><code className="text-foreground">mkdir [name]</code> - Create directory (simulated) </li>
+                    <li><code className="text-foreground">touch [file]</code> - Create file (simulated)</li>
+                    <li><code className="text-foreground">cat [file]</code> - Read file content</li>
+                    <li><code className="text-foreground">rm [file]</code> - Remove file (simulated)</li>
+                 </ul>
+              </div>
+              <div className="border border-border rounded-lg p-4 bg-secondary/10">
+                 <h4 className="font-bold mb-2 text-primary">System & Utils</h4>
+                 <ul className="space-y-1 text-sm text-muted-foreground">
+                    <li><code className="text-foreground">help</code> - Show available commands</li>
+                    <li><code className="text-foreground">clear</code> - Clear terminal output</li>
+                    <li><code className="text-foreground">whoami</code> - Current user info</li>
+                    <li><code className="text-foreground">date</code> - Show current system date</li>
+                    <li><code className="text-foreground">matrix</code> - Toggle Matrix rain effect</li>
+                    <li><code className="text-foreground">neofetch</code> - Show system info</li>
+                 </ul>
+              </div>
+              <div className="border border-border rounded-lg p-4 bg-secondary/10">
+                 <h4 className="font-bold mb-2 text-primary">Dev Tools</h4>
+                 <ul className="space-y-1 text-sm text-muted-foreground">
+                    <li><code className="text-foreground">flutter doctor</code> - Check flutter status</li>
+                    <li><code className="text-foreground">npm install</code> - Install dependencies (simulated)</li>
+                    <li><code className="text-foreground">git status</code> - Check git status</li>
+                    <li><code className="text-foreground">gradle build</code> - Run gradle build</li>
+                    <li><code className="text-foreground">adb devices</code> - List Android devices</li>
+                 </ul>
+              </div>
+           </div>
+
+           <h3 className="text-xl font-semibold mb-2 mt-6">Keyboard Shortcuts</h3>
            <div className="border border-border rounded-lg overflow-hidden">
              <table className="w-full text-left text-sm">
                <thead className="bg-muted/50">
@@ -82,7 +119,9 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
                </thead>
                <tbody className="divide-y divide-border">
                  <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">Ctrl+P</kbd></td><td className="py-2 px-4 text-muted-foreground">Quick File Search</td></tr>
-                 <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">F5</kbd></td><td className="py-2 px-4 text-muted-foreground">Start Debugging</td></tr>
+                 <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">F5</kbd></td><td className="py-2 px-4 text-muted-foreground">Start Debugging / Run</td></tr>
+                 <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">Ctrl+S</kbd></td><td className="py-2 px-4 text-muted-foreground">Save File</td></tr>
+                 <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">Ctrl+Shift+E</kbd></td><td className="py-2 px-4 text-muted-foreground">Toggle Explorer</td></tr>
                  <tr><td className="py-2 px-4"><kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs border border-border">Ctrl+`</kbd></td><td className="py-2 px-4 text-muted-foreground">Toggle Terminal</td></tr>
                </tbody>
              </table>
@@ -107,14 +146,14 @@ export function EditorContent({ file, content, onContentChange, previewTemplate 
            <div className="space-y-4 max-w-md w-full">
               <div className="flex items-center justify-between p-3 bg-secondary/30 rounded border border-border">
                  <span className="text-sm text-muted-foreground">Version</span>
-                 <span className="font-mono text-sm">1.0.0-beta</span>
+                 <span className="font-mono text-sm">2.4.6</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-secondary/30 rounded border border-border">
-                 <span className="text-sm text-muted-foreground">Build</span>
-                 <span className="font-mono text-sm">2024.12.06</span>
+                 <span className="text-sm text-muted-foreground">Date</span>
+                 <span className="font-mono text-sm">2025.12.06</span>
               </div>
               <button 
-                onClick={() => window.open('https://github.com/rashbip', '_blank')}
+                onClick={() => window.open('https://github.com/rashbip/ide_portfolio', '_blank')}
                 className="w-full py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
               >
                  <span>View on GitHub</span>
