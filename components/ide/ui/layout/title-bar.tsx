@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useContext } from "react"
 import { Search, X, Minus, Square, LayoutGrid } from "lucide-react"
 import type { FileType } from "../../data/files"
+import { IDEContext } from "../../../ide"
 
 type Props = {
   files: FileType[]
@@ -19,6 +20,9 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onToggleSideba
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<FileType[]>([])
   const searchRef = useRef<HTMLInputElement>(null)
+  const { showToast } = useContext(IDEContext)
+  
+  const isReadOnly = activeFile?.isSpecial && activeFile.isSpecial !== "html-preview" && activeFile.isSpecial !== "dart-preview"
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -132,21 +136,71 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onToggleSideba
 
           <MenuBarItem label="File">
             <MenuOption label="New File" onClick={onCreateFile} shortcut="Ctrl+N" />
-            <MenuOption label="Open File..." onClick={() => alert("Open File Picker (Not implemented)")} shortcut="Ctrl+O" />
+            <MenuOption label="Open File..." onClick={() => showToast("File picker not supported in browser", "warning")} shortcut="Ctrl+O" />
             <div className="h-px bg-border my-1" />
             <MenuOption label="Save" onClick={onSave} shortcut="Ctrl+S" />
-            <MenuOption label="Save As..." onClick={() => alert("Save As (Not implemented)")} shortcut="Ctrl+Shift+S" />
+            <MenuOption label="Save As..." onClick={() => showToast("Save As not supported", "warning")} shortcut="Ctrl+Shift+S" />
             <div className="h-px bg-border my-1" />
             <MenuOption label="Exit" onClick={() => window.location.reload()} />
           </MenuBarItem>
 
           <MenuBarItem label="Edit">
-            <MenuOption label="Undo" onClick={() => document.execCommand('undo')} shortcut="Ctrl+Z" />
-            <MenuOption label="Redo" onClick={() => document.execCommand('redo')} shortcut="Ctrl+Y" />
+            <MenuOption 
+                label="Undo" 
+                onClick={() => {
+                  try { document.execCommand('undo') } catch { showToast("Undo not available", "error") }
+                }} 
+                shortcut="Ctrl+Z" 
+                disabled={!!isReadOnly}
+            />
+            <MenuOption 
+                label="Redo" 
+                onClick={() => {
+                   try { document.execCommand('redo') } catch { showToast("Redo not available", "error") }
+                }} 
+                shortcut="Ctrl+Y" 
+                disabled={!!isReadOnly}
+            />
             <div className="h-px bg-border my-1" />
-            <MenuOption label="Cut" onClick={() => navigator.clipboard.writeText(window.getSelection()?.toString() || "")} shortcut="Ctrl+X" />
-            <MenuOption label="Copy" onClick={() => navigator.clipboard.writeText(window.getSelection()?.toString() || "")} shortcut="Ctrl+C" />
-            <MenuOption label="Paste" onClick={() => navigator.clipboard.readText().then(t => document.execCommand('insertText', false, t))} shortcut="Ctrl+V" />
+            <MenuOption 
+                label="Cut" 
+                onClick={() => {
+                  if (window.getSelection()?.toString()) {
+                    navigator.clipboard.writeText(window.getSelection()!.toString())
+                    document.execCommand('delete')
+                    showToast("Cut to clipboard")
+                  } else {
+                    showToast("Nothing selected", "warning")
+                  }
+                }} 
+                shortcut="Ctrl+X" 
+                disabled={!!isReadOnly}
+            />
+            <MenuOption 
+                label="Copy" 
+                onClick={() => {
+                   if (window.getSelection()?.toString()) {
+                     navigator.clipboard.writeText(window.getSelection()!.toString())
+                     showToast("Copied to clipboard")
+                   } else {
+                     showToast("Nothing selected", "warning")
+                   }
+                }} 
+                shortcut="Ctrl+C" 
+            />
+            <MenuOption 
+                label="Paste" 
+                onClick={async () => {
+                  try {
+                    const text = await navigator.clipboard.readText()
+                    if (text) document.execCommand('insertText', false, text)
+                  } catch (e) {
+                    showToast("Clipboard access denied", "error")
+                  }
+                }} 
+                shortcut="Ctrl+V" 
+                disabled={!!isReadOnly}
+            />
           </MenuBarItem>
 
           <MenuBarItem label="View">
@@ -158,22 +212,22 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onToggleSideba
           <MenuBarItem label="Run">
             <MenuOption 
                 label="Start Debugging" 
-                onClick={() => alert("Start Debugging")} 
+                onClick={() => showToast("Debugging started... (Simulation)", "success")} 
                 shortcut="F5" 
                 disabled={!activeFile || !/\.(js|html|dart|kt|css)$/.test(activeFile.name)}
             />
             <MenuOption 
                 label="Run Without Debugging" 
-                onClick={() => alert("Run Without Debugging")} 
+                onClick={() => showToast("Running... (Simulation)", "success")} 
                 shortcut="Ctrl+F5" 
                 disabled={!activeFile || !/\.(js|html|dart|kt|css)$/.test(activeFile.name)} 
             />
           </MenuBarItem>
 
           <MenuBarItem label="Help">
-            <MenuOption label="Welcome" onClick={() => alert("Welcome Guide")} />
+            <MenuOption label="Welcome" onClick={() => showToast("Welcome to rashbip OS")} />
             <MenuOption label="Documentation" onClick={() => window.open("https://github.com/rashbip", "_blank")} />
-            <MenuOption label="About" onClick={() => alert("Rashbip OS v1.0.0")} />
+            <MenuOption label="About" onClick={() => showToast("Rashbip OS v1.0.0")} />
           </MenuBarItem>
         </div>
 

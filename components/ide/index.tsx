@@ -1,20 +1,20 @@
 "use client"
 
 import { useState, useEffect, createContext, useRef } from "react"
-import { ActivityBar } from "./ide/ui/layout/activity-bar"
-import { Sidebar } from "./ide/ui/layout/sidebar"
-import { EditorTabs } from "./ide/ui/layout/editor-tabs"
-import { EditorContent } from "./ide/ui/editors/editor-content"
-import { TerminalPanel } from "./ide/ui/terminal/terminal-panel"
-import { StatusBar } from "./ide/ui/layout/status-bar"
-import { ProfilePage } from "./ide/ui/editors/profile-page"
-import { HtmlPreview } from "./ide/ui/editors/html-preview"
-import { DartPreview } from "./ide/ui/editors/dart-preview"
-import { TitleBar } from "./ide/ui/layout/title-bar"
-import { EmptyState } from "./ide/ui/editors/empty-state"
-import { KotlinViewer } from "./ide/ui/editors/kotlin-viewer"
-import { ProfileHtmlViewer } from "./ide/ui/editors/profile-html-viewer"
-import { files as initialFiles, type FileType } from "./ide/data/files"
+import { ActivityBar } from "./ui/layout/activity-bar"
+import { Sidebar } from "./ui/layout/sidebar"
+import { EditorTabs } from "./ui/layout/editor-tabs"
+import { EditorContent } from "./ui/editors/editor-content"
+import { TerminalPanel } from "./ui/terminal/terminal-panel"
+import { StatusBar } from "./ui/layout/status-bar"
+import { ProfilePage } from "./ui/editors/profile-page"
+import { HtmlPreview } from "./ui/editors/html-preview"
+import { DartPreview } from "./ui/editors/dart-preview"
+import { TitleBar } from "./ui/layout/title-bar"
+import { EmptyState } from "./ui/editors/empty-state"
+import { KotlinViewer } from "./ui/editors/kotlin-viewer"
+import { ProfileHtmlViewer } from "./ui/editors/profile-html-viewer"
+import { files as initialFiles, type FileType } from "./data/files"
 
 export type { FileType }
 
@@ -23,6 +23,7 @@ type IDEContextType = {
   addTerminalOutput: (message: string, type?: "info" | "success" | "error") => void
   setTerminalTab: (tab: "terminal" | "problems" | "output") => void
   activeTerminalTab: "terminal" | "problems" | "output"
+  showToast: (message: string, type?: "info" | "error" | "warning" | "success") => void
 }
 
 export const IDEContext = createContext<IDEContextType>({
@@ -30,6 +31,7 @@ export const IDEContext = createContext<IDEContextType>({
   addTerminalOutput: () => { },
   setTerminalTab: () => { },
   activeTerminalTab: "terminal",
+  showToast: () => { },
 })
 
 export function IDE() {
@@ -49,6 +51,7 @@ export function IDE() {
     Array<{ timestamp: string; message: string; type: "info" | "success" | "error" }>
   >([{ timestamp: new Date().toLocaleTimeString(), message: "Terminal ready.", type: "info" }])
   const [activeTerminalTab, setActiveTerminalTab] = useState<"terminal" | "problems" | "output">("terminal")
+  const [toast, setToast] = useState<{ message: string; type: "info" | "error" | "warning" | "success" } | null>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
 
   const activityBarRef = useRef<HTMLDivElement>(null)
@@ -146,6 +149,7 @@ export function IDE() {
   const handleSave = () => {
     if (activeFile) {
       addTerminalOutput(`Saved ${activeFile.name}`, "success")
+      showToast(`Saved ${activeFile.name}`, "success")
     }
   }
 
@@ -170,6 +174,10 @@ export function IDE() {
     setTerminalOutputs((prev) => [...prev, { timestamp, message, type }])
   }
 
+  const showToast = (message: string, type: "info" | "error" | "warning" | "success" = "info") => {
+    setToast({ message, type })
+  }
+
   const getFileContent = (file: FileType) => {
     return fileContents[file.path] ?? file.content
   }
@@ -183,7 +191,7 @@ export function IDE() {
   }
 
   return (
-    <IDEContext.Provider value={{ updateFileContent, addTerminalOutput, setTerminalTab: setActiveTerminalTab, activeTerminalTab: activeTerminalTab }}>
+    <IDEContext.Provider value={{ updateFileContent, addTerminalOutput, setTerminalTab: setActiveTerminalTab, activeTerminalTab: activeTerminalTab, showToast }}>
       <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
         <TitleBar 
           files={allFiles} 
@@ -290,8 +298,30 @@ export function IDE() {
           </div>
         </div>
 
-        <StatusBar file={activeFile} />
+        <StatusBar file={activeFile || null} />
+        {toast && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast(null)} 
+          />
+        )}
       </div>
     </IDEContext.Provider>
+  )
+}
+
+function Toast({ message, type, onClose }: { message: string, type: "info" | "error" | "warning" | "success", onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000)
+    return () => clearTimeout(timer)
+  }, [onClose])
+  
+  const bg = type === "error" ? "bg-red-500" : type === "warning" ? "bg-yellow-500" : type === "success" ? "bg-green-500" : "bg-blue-500"
+  
+  return (
+    <div className={`fixed bottom-10 right-4 ${bg} text-white px-4 py-2 rounded shadow-lg animate-slide-in-up z-50 flex items-center gap-2`}>
+      <span>{message}</span>
+    </div>
   )
 }

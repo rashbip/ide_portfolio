@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import { useRef, useEffect } from "react"
 
 import { X } from "lucide-react"
 import type { FileType } from "../../data/files"
@@ -32,9 +32,26 @@ export function EditorTabs({ openFiles, activeFile, setActiveFile, closeFile }: 
     return <WebIcon className="w-4 h-4" />
   }
 
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) {
+      const onWheel = (e: WheelEvent) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault()
+          el.scrollLeft += e.deltaY
+        }
+      }
+      el.addEventListener("wheel", onWheel)
+      return () => el.removeEventListener("wheel", onWheel)
+    }
+  }, [])
+
   return (
     <div
-      className="flex items-center border-b border-border overflow-x-auto"
+      ref={scrollRef}
+      className="flex items-center border-b border-border overflow-x-auto no-scrollbar"
       style={{ background: "var(--tab-inactive)" }}
     >
       {openFiles.map((file) => (
