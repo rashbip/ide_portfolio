@@ -14,6 +14,7 @@ import { TitleBar } from "./ui/layout/title-bar"
 import { EmptyState } from "./ui/editors/empty-state"
 import { KotlinViewer } from "./ui/editors/kotlin-viewer"
 import { ProfileHtmlViewer } from "./ui/editors/profile-html-viewer"
+import { FlutterPreview } from "./ui/editors/flutter-preview"
 import { files as initialFiles, type FileType } from "./data/files"
 import { EditorSettingsProvider } from "./context/editor-settings-context"
 import JSZip from "jszip"
@@ -24,10 +25,12 @@ export type { FileType }
 
 import { IDEContext } from "./context/ide-context"
 import { createFile, createFolderMarker } from "./utils/file-management"
+import { useEditorSettings } from "./context/editor-settings-context"
 
 
 const STORAGE_KEY_FILES = "ide_files"
 const STORAGE_KEY_CONTENTS = "ide_file_contents"
+const STORAGE_KEY_LAST_FILE = "ide_last_file"
 
 // Load files from localStorage or use defaults
 function loadStoredFiles(): FileType[] {
@@ -36,18 +39,36 @@ function loadStoredFiles(): FileType[] {
     const stored = localStorage.getItem(STORAGE_KEY_FILES)
     if (stored) {
       const parsed = JSON.parse(stored) as FileType[]
-      // Merge with initial files to ensure core files exist
-      const storedPaths = new Set(parsed.map(f => f.path))
-      const coreFiles = initialFiles.filter(f => 
-        f.isSpecial === "profile" || f.isSpecial === "profile-html"
-      )
-      // Add core files if missing
-      for (const core of coreFiles) {
-        if (!storedPaths.has(core.path)) {
-          parsed.unshift(core)
+      // Create a map of stored files by path
+      const storedMap = new Map(parsed.map(f => [f.path, f]))
+      
+      // Merge with initial files - update existing files with new properties from initialFiles
+      const result: FileType[] = []
+      const processedPaths = new Set<string>()
+      
+      // First, add/update files from initialFiles (these have the latest properties)
+      for (const initialFile of initialFiles) {
+        const storedFile = storedMap.get(initialFile.path)
+        if (storedFile) {
+          // Merge: use stored content if it exists, but keep initial file's structure and isSpecial
+          result.push({
+            ...initialFile,
+            content: storedFile.content || initialFile.content,
+          })
+        } else {
+          result.push(initialFile)
+        }
+        processedPaths.add(initialFile.path)
+      }
+      
+      // Add any stored files that aren't in initialFiles (user-created files)
+      for (const storedFile of parsed) {
+        if (!processedPaths.has(storedFile.path)) {
+          result.push(storedFile)
         }
       }
-      return parsed
+      
+      return result
     }
   } catch (e) {
     console.error("Failed to load files from storage:", e)
@@ -66,7 +87,8 @@ function loadStoredContents(): Record<string, string> {
   return {}
 }
 
-export function IDE() {
+function IDEInner() {
+  const { settings } = useEditorSettings()
   const [activeView, setActiveView] = useState<string>("explorer")
   const [allFiles, setAllFiles] = useState<FileType[]>(initialFiles)
   const [openFiles, setOpenFiles] = useState<FileType[]>([])
@@ -90,19 +112,49 @@ export function IDE() {
 
   const activityBarRef = useRef<HTMLDivElement>(null)
 
-  // Load from localStorage on mount
+  /**
+   * Initialize IDE: Load files and settings from localStorage
+   * - Loads stored files and file contents
+   * - Optionally restores last opened file if "Remember Last File" is enabled
+   * - Sets default open files (profile pages)
+   */
   useEffect(() => {
     const storedFiles = loadStoredFiles()
     const storedContents = loadStoredContents()
     setAllFiles(storedFiles)
     setFileContents(storedContents)
-    // Set default open files
+    
+    // Try to load last opened file if rememberLastFile is enabled
+    let fileToOpen: FileType | null = null
+    if (settings.rememberLastFile) {
+      try {
+        const lastFilePath = localStorage.getItem(STORAGE_KEY_LAST_FILE)
+        if (lastFilePath) {
+          fileToOpen = storedFiles.find(f => f.path === lastFilePath) || null
+        }
+      } catch (e) {
+        console.error("Failed to load last file:", e)
+      }
+    }
+    
+    // Set default open files (profile pages)
     const profileFile = storedFiles.find(f => f.isSpecial === "profile")
     const profileHtml = storedFiles.find(f => f.isSpecial === "profile-html")
     setOpenFiles([profileFile, profileHtml].filter(Boolean) as FileType[])
-    setActiveFile(profileFile || storedFiles[0] || null)
+    
+    // Use last opened file if available, otherwise use defaults
+    if (fileToOpen) {
+      setActiveFile(fileToOpen)
+      // Make sure it's in openFiles
+      if (!openFiles.find(f => f.path === fileToOpen!.path)) {
+        setOpenFiles(prev => [...prev, fileToOpen!])
+      }
+    } else {
+      setActiveFile(profileFile || storedFiles[0] || null)
+    }
+    
     setMounted(true)
-  }, [])
+  }, [settings.rememberLastFile])
 
   // Save files to localStorage when they change
   useEffect(() => {
@@ -180,14 +232,30 @@ export function IDE() {
     }
   }, [isResizingSidebar])
 
+  /**
+   * Open a file in the editor
+   * - Adds file to openFiles tabs if not already open
+   * - Sets file as active
+   * - Saves as last opened file if "Remember Last File" is enabled
+   */
   const openFile = (file: FileType) => {
     // Check if the file already exists in allFiles to ensure we use the latest reference
     const existingFile = allFiles.find(f => f.path === file.path) || file
 
+    // Add to open files if not already open
     if (!openFiles.find((f) => f.path === existingFile.path)) {
       setOpenFiles([...openFiles, existingFile])
     }
     setActiveFile(existingFile)
+    
+    // Save last opened file if rememberLastFile is enabled
+    if (settings.rememberLastFile && mounted) {
+      try {
+        localStorage.setItem(STORAGE_KEY_LAST_FILE, existingFile.path)
+      } catch (e) {
+        console.error("Failed to save last file:", e)
+      }
+    }
   }
 
   // Create File function - now accepts name from dialog or TitleBar
@@ -202,7 +270,10 @@ export function IDE() {
   // Create folder function placeholder - implementation moved to bottom or deduped
 
 
-  // Rename File
+  /**
+   * Rename a file
+   * Updates file name and path in allFiles, fileContents, openFiles, and activeFile
+   */
   const handleRenameFile = (file: FileType, newName: string) => {
     if (!newName.trim() || newName === file.name) return
 
@@ -234,7 +305,10 @@ export function IDE() {
     addTerminalOutput(`Renamed ${file.name} to ${newName}`, "info")
   }
 
-  // Rename Folder
+  /**
+   * Rename a folder
+   * Updates all file paths within the folder recursively
+   */
   const handleRenameFolder = (oldPath: string, newName: string) => {
     const parts = oldPath.split('/')
     const oldName = parts[parts.length - 1]
@@ -283,7 +357,9 @@ export function IDE() {
     addTerminalOutput(`Renamed folder ${oldName} to ${newName}`, "info")
   }
 
-  // Download File
+  /**
+   * Download a file to user's device
+   */
   const handleDownloadFile = (file: FileType) => {
     const content = fileContents[file.path] ?? file.content
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
@@ -313,7 +389,10 @@ export function IDE() {
     }
   }
 
-  // Save As - Download project files as ZIP (client-side only)
+  /**
+   * Save As - Download all project files as ZIP
+   * Creates a ZIP archive with the complete folder structure
+   */
   const handleSaveAs = async () => {
     try {
       // Include all project files except profile pages (our internal special views)
@@ -348,6 +427,10 @@ export function IDE() {
     }
   }
 
+  /**
+   * Close a file tab
+   * Removes file from openFiles and switches to another file if available
+   */
   const closeFile = (file: FileType) => {
     const newOpenFiles = openFiles.filter((f) => f.path !== file.path)
     setOpenFiles(newOpenFiles)
@@ -360,7 +443,10 @@ export function IDE() {
     }
   }
 
-  // Delete file (except protected files)
+  /**
+   * Delete a file from the virtual file system
+   * Cannot delete protected files (profile pages)
+   */
   const handleDeleteFile = (file: FileType) => {
     // Cannot delete profile pages
     if (file.isSpecial === "profile" || file.isSpecial === "profile-html") {
@@ -385,7 +471,10 @@ export function IDE() {
     addTerminalOutput(`Deleted file: ${file.name}`, "info")
   }
 
-  // Create folder - creates a hidden .keep file to represent the folder
+  /**
+   * Create a folder in the virtual file system
+   * Uses a hidden .keep file to represent the folder structure
+   */
   const handleCreateFolder = (folderPath: string) => {
     const markerFile = createFolderMarker(folderPath)
     if (!markerFile) {
@@ -409,7 +498,10 @@ export function IDE() {
   }
 
 
-  // Delete folder and all files within it
+  /**
+   * Delete a folder and all files within it
+   * Recursively removes all files in the folder
+   */
   const handleDeleteFolder = (folderPath: string) => {
     // Map display path to actual file paths
     const pathParts = folderPath.split('/').filter(Boolean)
@@ -456,7 +548,10 @@ export function IDE() {
     addTerminalOutput(`Deleted folder: ${actualFolderPath} (${filesToDelete.length} files)`, "info")
   }
 
-  // Reset settings only (theme, expanded folders, UI preferences)
+  /**
+   * Reset IDE settings to defaults
+   * Clears theme, editor preferences, and UI state (but keeps files)
+   */
   const handleResetSettings = () => {
     // Clear localStorage settings (but not files)
     localStorage.removeItem("expandedFolders")
@@ -478,7 +573,10 @@ export function IDE() {
     addTerminalOutput("Reset settings to defaults", "info")
   }
 
-  // Reset to default IDE state (restore all files to initial state)
+  /**
+   * Reset IDE to default state
+   * Clears all files, contents, and settings - restores to initial state
+   */
   const handleResetToDefault = () => {
     // Clear all localStorage
     localStorage.removeItem(STORAGE_KEY_FILES)
@@ -512,19 +610,33 @@ export function IDE() {
     showToast("IDE restored to default state", "success")
   }
 
+  /**
+   * Update file content in the cache
+   * Used when user edits a file
+   */
   const updateFileContent = (path: string, content: string) => {
     setFileContents((prev) => ({ ...prev, [path]: content }))
   }
 
+  /**
+   * Add output message to terminal
+   */
   const addTerminalOutput = (message: string, type: "info" | "success" | "error" | "warning" = "info") => {
     const timestamp = new Date().toLocaleTimeString()
     setTerminalOutputs((prev) => [...prev, { timestamp, message, type }])
   }
 
+  /**
+   * Show toast notification
+   */
   const showToast = (message: string, type: "info" | "error" | "warning" | "success" = "info") => {
     setToast({ message, type })
   }
 
+  /**
+   * Get file content from cache or default content
+   * Returns edited content if available, otherwise returns original file content
+   */
   const getFileContent = (file: FileType) => {
     return fileContents[file.path] ?? file.content
   }
@@ -549,20 +661,17 @@ export function IDE() {
 
   if (!mounted) {
     return (
-      <EditorSettingsProvider>
-        <div className="h-screen w-screen flex items-center justify-center bg-background">
-          <div className="animate-pulse-slow text-muted-foreground">Loading IDE...</div>
-        </div>
-      </EditorSettingsProvider>
+      <div className="h-screen w-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse-slow text-muted-foreground">Loading IDE...</div>
+      </div>
     )
   }
 
   // If exited, show only full-screen terminal
   if (isExited) {
     return (
-      <EditorSettingsProvider>
         <IDEContext.Provider value={{ updateFileContent, addTerminalOutput, setTerminalTab: setActiveTerminalTab, activeTerminalTab: activeTerminalTab, showToast }}>
-          <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
+          <div className="h-screen w-screen flex flex-col overflow-hidden bg-background" style={{ height: '100dvh' }}>
             <div className="h-full flex flex-col">
               <TerminalPanel
                 onClose={() => {}}
@@ -587,11 +696,34 @@ export function IDE() {
                 }}
                 getFileContent={(path) => getFileContent(allFiles.find(f => f.path === path) || { name: "", path: "", icon: "", content: "", language: "" } as FileType)}
                 onUpdateFileContent={(path, content) => updateFileContent(path, content)}
+                onMoveFile={(sourcePath, destPath) => {
+                  const sourceFile = allFiles.find(f => f.path === sourcePath)
+                  if (sourceFile) {
+                    const destName = destPath.split("/").pop() || sourceFile.name
+                    const destParent = destPath.substring(0, destPath.lastIndexOf("/")) || "/"
+                    const currentParent = sourcePath.substring(0, sourcePath.lastIndexOf("/")) || "/"
+                    
+                    // If moving to different directory
+                    if (destParent !== currentParent) {
+                      const content = getFileContent(sourceFile)
+                      handleDeleteFile(sourceFile)
+                      handleCreateFile(destName, destParent === "/" ? undefined : destParent)
+                      setTimeout(() => {
+                        const newFile = allFiles.find(f => f.path === destPath) || allFiles.find(f => f.name === destName && f.path.startsWith(destParent))
+                        if (newFile) {
+                          updateFileContent(newFile.path, content)
+                        }
+                      }, 100)
+                    } else {
+                      // Just renaming in same directory
+                      handleRenameFile(sourceFile, destName)
+                    }
+                  }
+                }}
               />
             </div>
           </div>
         </IDEContext.Provider>
-      </EditorSettingsProvider>
     )
   }
 
@@ -721,8 +853,7 @@ export function IDE() {
   // ... (previous functions)
 
   return (
-    <EditorSettingsProvider>
-      <IDEContext.Provider value={{ updateFileContent, addTerminalOutput, setTerminalTab: setActiveTerminalTab, activeTerminalTab: activeTerminalTab, showToast }}>
+    <IDEContext.Provider value={{ updateFileContent, addTerminalOutput, setTerminalTab: setActiveTerminalTab, activeTerminalTab: activeTerminalTab, showToast }}>
         <div className={`
           flex flex-col overflow-hidden bg-background 
           ${isWindowed 
@@ -795,7 +926,7 @@ export function IDE() {
             </div>
           )}
 
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
             <EditorTabs
               openFiles={openFiles}
               activeFile={activeFile}
@@ -803,7 +934,7 @@ export function IDE() {
               closeFile={closeFile}
             />
 
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
               <div className="flex-1 overflow-hidden tab-content">
                 {!activeFile ? (
                   <EmptyState />
@@ -833,6 +964,8 @@ export function IDE() {
                   />
                 ) : activeFile.isSpecial === "kotlin-viewer" ? (
                   <KotlinViewer content={activeFile.content} filename={activeFile.name} />
+                ) : activeFile.isSpecial === "flutter-preview" ? (
+                  <FlutterPreview content={getFileContent(activeFile)} filename={activeFile.name} />
                 ) : (
                   <EditorContent
                     file={activeFile}
@@ -850,8 +983,15 @@ export function IDE() {
               {terminalOpen && (
               <TerminalPanel
                 onClose={() => setTerminalOpen(false)}
-                height={terminalHeight}
-                onHeightChange={setTerminalHeight}
+                height={isMobile ? Math.min(terminalHeight, window.innerHeight * 0.4) : terminalHeight}
+                onHeightChange={(newHeight) => {
+                  // On mobile, limit terminal height to prevent keyboard issues
+                  if (isMobile) {
+                    setTerminalHeight(Math.min(newHeight, window.innerHeight * 0.5))
+                  } else {
+                    setTerminalHeight(newHeight)
+                  }
+                }}
                 outputs={terminalOutputs}
                 activeTab={activeTerminalTab}
                 onTabChange={setActiveTerminalTab}
@@ -871,6 +1011,30 @@ export function IDE() {
                 }}
                 getFileContent={(path) => getFileContent(allFiles.find(f => f.path === path) || { name: "", path: "", icon: "", content: "", language: "" } as FileType)}
                 onUpdateFileContent={(path, content) => updateFileContent(path, content)}
+                onMoveFile={(sourcePath, destPath) => {
+                  const sourceFile = allFiles.find(f => f.path === sourcePath)
+                  if (sourceFile) {
+                    const destName = destPath.split("/").pop() || sourceFile.name
+                    const destParent = destPath.substring(0, destPath.lastIndexOf("/")) || "/"
+                    const currentParent = sourcePath.substring(0, sourcePath.lastIndexOf("/")) || "/"
+                    
+                    // If moving to different directory
+                    if (destParent !== currentParent) {
+                      const content = getFileContent(sourceFile)
+                      handleDeleteFile(sourceFile)
+                      handleCreateFile(destName, destParent === "/" ? undefined : destParent)
+                      setTimeout(() => {
+                        const newFile = allFiles.find(f => f.path === destPath) || allFiles.find(f => f.name === destName && f.path.startsWith(destParent))
+                        if (newFile) {
+                          updateFileContent(newFile.path, content)
+                        }
+                      }, 100)
+                    } else {
+                      // Just renaming in same directory
+                      handleRenameFile(sourceFile, destName)
+                    }
+                  }
+                }}
               />
               )}
             </div>
@@ -887,6 +1051,13 @@ export function IDE() {
         )}
         </div>
       </IDEContext.Provider>
+  )
+}
+
+export function IDE() {
+  return (
+    <EditorSettingsProvider>
+      <IDEInner />
     </EditorSettingsProvider>
   )
 }

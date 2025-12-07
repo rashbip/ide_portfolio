@@ -278,8 +278,21 @@
   animation: typing 0.5s steps(40) forwards;
 }
 
-/* Custom scrollbar - IDE style */
+/* Hide all scrollbars but keep scrolling functionality */
 ::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome, Safari, Edge */
+  width: 0;
+  height: 0;
+}
+
+/* Hide scrollbar for Firefox and IE/Edge */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Custom scrollbar styles (commented out - scrollbars are hidden for modern look) */
+/* ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
@@ -295,7 +308,7 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
-}
+} */
 
 /* Selection */
 ::selection {

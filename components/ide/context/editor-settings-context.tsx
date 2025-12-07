@@ -9,6 +9,7 @@ export type EditorSettings = {
   minimap: boolean
   autoSave: boolean
   autoSaveInterval: number // in milliseconds
+  rememberLastFile: boolean
 }
 
 const DEFAULT_SETTINGS: EditorSettings = {
@@ -18,6 +19,7 @@ const DEFAULT_SETTINGS: EditorSettings = {
   minimap: true,
   autoSave: true,
   autoSaveInterval: 2 * 60 * 1000, // 2 minutes
+  rememberLastFile: false, // Remember last opened file (default: OFF)
 }
 
 type EditorSettingsContextType = {
@@ -47,6 +49,7 @@ function loadSettings(): EditorSettings {
       minimap: localStorage.getItem("ide_minimap") !== "false",
       autoSave: localStorage.getItem("ide_autoSave") !== "false",
       autoSaveInterval: 2 * 60 * 1000, // Fixed 2 minutes
+      rememberLastFile: localStorage.getItem("ide_rememberLastFile") === "true", // Default false
     }
   } catch {
     return DEFAULT_SETTINGS
@@ -72,6 +75,7 @@ export function EditorSettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("ide_wordWrap", settings.wordWrap.toString())
     localStorage.setItem("ide_minimap", settings.minimap.toString())
     localStorage.setItem("ide_autoSave", settings.autoSave.toString())
+    localStorage.setItem("ide_rememberLastFile", settings.rememberLastFile.toString())
     
     // Apply CSS variables
     document.documentElement.style.setProperty("--editor-font-size", `${settings.fontSize}px`)
@@ -89,6 +93,7 @@ export function EditorSettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("ide_wordWrap")
     localStorage.removeItem("ide_minimap")
     localStorage.removeItem("ide_autoSave")
+    localStorage.removeItem("ide_rememberLastFile")
     
     setSettings(DEFAULT_SETTINGS)
   }

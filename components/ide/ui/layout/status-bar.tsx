@@ -24,8 +24,24 @@ export function StatusBar({ file }: Props) {
   }
 
   return (
-    <div className="status-bar h-6 flex items-center justify-between px-3 text-xs">
-      <div className="flex items-center gap-4">
+    <div 
+      className="status-bar h-6 flex items-center justify-between px-3 text-xs overflow-x-auto overflow-y-hidden" 
+      style={{ 
+        scrollbarWidth: 'none', // Hide scrollbar
+        WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth',
+        msOverflowStyle: 'none' // IE/Edge
+      }}
+      onWheel={(e) => {
+        // Enable horizontal scrolling with mouse wheel
+        e.preventDefault()
+        const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX
+        if (delta !== 0) {
+          e.currentTarget.scrollLeft += delta
+        }
+      }}
+    >
+      <div className="flex items-center gap-4 min-w-max">
         <div className="flex items-center gap-1">
           <GitBranch className="w-3.5 h-3.5" />
           <span>main</span>
@@ -42,23 +58,23 @@ export function StatusBar({ file }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 min-w-max">
         {file ? (
           <>
-            <span>Ln 1, Col 1</span>
-            <span>Spaces: 4</span>
-            <span>UTF-8</span>
+            <span className="hidden sm:inline">Ln 1, Col 1</span>
+            <span className="hidden md:inline">Spaces: 4</span>
+            <span className="hidden lg:inline">UTF-8</span>
             <span>{getLanguageDisplay(file.language)}</span>
           </>
         ) : (
           <span className="text-muted-foreground">No file open</span>
         )}
-        <span className="opacity-70">{resolvedTheme === "dark" ? "Dark+" : "Light+"}</span>
-        <div className="flex items-center gap-1">
+        <span className="opacity-70 hidden sm:inline">{resolvedTheme === "dark" ? "Dark+" : "Light+"}</span>
+        <div className="flex items-center gap-1 hidden md:flex">
           <Check className="w-3.5 h-3.5" />
           <span>Prettier</span>
         </div>
-        <Bell className="w-3.5 h-3.5" />
+        <Bell className="w-3.5 h-3.5 hidden sm:block" />
       </div>
     </div>
   )

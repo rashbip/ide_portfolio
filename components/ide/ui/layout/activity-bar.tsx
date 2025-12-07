@@ -51,8 +51,18 @@ export function ActivityBar({
   }
 
   return (
-    <div ref={containerRef} className="w-12 flex flex-col justify-between py-2" style={{ background: "var(--activity-bar)" }}>
-      <div className="flex flex-col items-center gap-1">
+    <div 
+      ref={containerRef} 
+      className="w-12 flex flex-col justify-between py-2 overflow-y-auto overflow-x-hidden" 
+      style={{ 
+        background: "var(--activity-bar)", 
+        maxHeight: "100vh",
+        scrollbarWidth: 'none', // Hide scrollbar
+        WebkitOverflowScrolling: 'touch',
+        msOverflowStyle: 'none' // IE/Edge
+      }}
+    >
+      <div className="flex flex-col items-center gap-1 min-w-max">
         {topIcons.map(({ id, icon: Icon, label }) => (
           <button
             key={id}
@@ -66,7 +76,7 @@ export function ActivityBar({
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-1 min-w-max">
         <button
           onClick={toggleTheme}
           className="activity-icon w-10 h-10 flex items-center justify-center rounded transition-all"

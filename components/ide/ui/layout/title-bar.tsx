@@ -152,12 +152,24 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
 
   return (
     <>
+      {/* Title bar - scrollable horizontally on small screens, scrollbar hidden */}
       <div
-        className="h-9 flex items-center justify-between px-2 border-b border-border select-none"
-        style={{ background: "var(--activity-bar)" }}
+        className="h-9 flex items-center justify-between px-2 border-b border-border select-none overflow-x-auto overflow-y-hidden"
+        style={{ 
+          background: "var(--activity-bar)", 
+          scrollbarWidth: 'none', // Hide scrollbar
+          WebkitOverflowScrolling: 'touch',
+          msOverflowStyle: 'none' // IE/Edge
+        }}
+        onWheel={(e) => {
+          // Enable horizontal scrolling with mouse wheel
+          if (e.deltaY !== 0) {
+            e.currentTarget.scrollLeft += e.deltaY
+          }
+        }}
       >
         {/* Left - Menu */}
-        <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 min-w-max">
           <button className="p-1.5 rounded hover:bg-white/10 transition-colors" title="Menu">
             <LayoutGrid className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -321,7 +333,7 @@ export function TitleBar({ files, openFile, onCreateFile, onSave, onSaveAs, onOp
         </button>
 
         {/* Right - Window Controls */}
-        <div className="hidden md:flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 min-w-max">
           <button onClick={onMinimize} className="p-1.5 rounded hover:bg-white/10 transition-colors" title="Minimize" aria-label="Minimize">
             <Minus className="w-3.5 h-3.5 text-muted-foreground" />
           </button>

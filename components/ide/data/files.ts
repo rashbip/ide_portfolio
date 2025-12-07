@@ -5,7 +5,7 @@ export type FileType = {
   icon: string
   content: string
   language: string
-  isSpecial?: "profile" | "html-preview" | "dart-preview" | "kotlin-viewer" | "profile-html" | "welcome" | "documentation" | "about"
+  isSpecial?: "profile" | "html-preview" | "dart-preview" | "kotlin-viewer" | "profile-html" | "welcome" | "documentation" | "about" | "flutter-preview"
 }
 
 export const files: FileType[] = [
@@ -623,5 +623,404 @@ pubspec.lock`,
   ]
 }`,
     language: "json",
+  },
+  {
+    name: "package.json",
+    path: "/package.json",
+    icon: "json",
+    content: `{
+  "name": "rashbip-portfolio",
+  "version": "1.0.0",
+  "description": "Developer portfolio website",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.160.0",
+    "@react-three/fiber": "^8.15.0",
+    "framer-motion": "^10.16.0",
+    "lenis": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0",
+    "tailwindcss": "^3.4.0"
+  }
+}`,
+    language: "json",
+  },
+  {
+    name: "tsconfig.json",
+    path: "/tsconfig.json",
+    icon: "config",
+    content: `{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}`,
+    language: "json",
+  },
+  {
+    name: "tailwind.config.ts",
+    path: "/tailwind.config.ts",
+    icon: "config",
+    content: `import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+      },
+    },
+  },
+  plugins: [],
+}
+export default config`,
+    language: "typescript",
+  },
+  {
+    name: "next.config.js",
+    path: "/next.config.js",
+    icon: "javascript",
+    content: `/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
+}
+
+module.exports = nextConfig`,
+    language: "javascript",
+  },
+  {
+    name: "MainActivity.kt",
+    path: "/android/app/src/main/java/com/rashbip/MainActivity.kt",
+    icon: "kotlin",
+    content: `package com.rashbip.app
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MyAppTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    PortfolioScreen()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PortfolioScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "rashbip",
+            style = MaterialTheme.typography.displayMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Android & Flutter Developer",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+@Composable
+fun MyAppTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = darkColorScheme(),
+        content = content
+    )
+}`,
+    language: "kotlin",
+  },
+  {
+    name: "pubspec.yaml",
+    path: "/flutter/pubspec.yaml",
+    icon: "yaml",
+    content: `name: rashbip_portfolio
+description: Flutter portfolio application
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  riverpod: ^2.4.0
+  flutter_riverpod: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/`,
+    language: "yaml",
+  },
+  {
+    name: "main.dart",
+    path: "/flutter/lib/main.dart",
+    icon: "dart",
+    content: `import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+void main() {
+  runApp(const ProviderScope(child: MyApp()));
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'rashbip Portfolio',
+      theme: ThemeData.dark(),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('rashbip'),
+      ),
+      body: const Center(
+        child: Text('Flutter Portfolio'),
+      ),
+    );
+  }
+}`,
+    language: "dart",
+    isSpecial: "flutter-preview",
+  },
+  {
+    name: "LICENSE",
+    path: "/LICENSE",
+    icon: "text",
+    content: `MIT License
+
+Copyright (c) 2024 rashbip
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`,
+    language: "text",
+  },
+  {
+    name: "CHANGELOG.md",
+    path: "/CHANGELOG.md",
+    icon: "markdown",
+    content: `# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [1.0.0] - 2024-01-01
+
+### Added
+- Initial portfolio website
+- VS Code-like IDE interface
+- Terminal with file management commands
+- File explorer with folder support
+- Code editor with syntax highlighting
+- Multiple language support (Kotlin, Dart, TypeScript, etc.)
+
+### Features
+- File creation, deletion, and editing
+- Folder management
+- Terminal commands (ls, cd, cat, touch, mkdir, rm, etc.)
+- Tab completion
+- Command aliases
+- File search and navigation`,
+    language: "markdown",
+  },
+  {
+    name: ".env.example",
+    path: "/.env.example",
+    icon: "config",
+    content: `# Environment Variables
+# Copy this file to .env and fill in your values
+
+NEXT_PUBLIC_SITE_URL=https://rashidul.is-a.dev
+NEXT_PUBLIC_GITHUB_URL=https://github.com/rashbip
+NEXT_PUBLIC_REDDIT_USER=Fair_Concentrate606`,
+    language: "text",
+  },
+  {
+    name: "docker-compose.yml",
+    path: "/docker-compose.yml",
+    icon: "yaml",
+    content: `version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - .:/app
+      - /app/node_modules`,
+    language: "yaml",
+  },
+  {
+    name: "Dockerfile",
+    path: "/Dockerfile",
+    icon: "text",
+    content: `FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "start"]`,
+    language: "dockerfile",
+  },
+  {
+    name: "notes.txt",
+    path: "/notes.txt",
+    icon: "text",
+    content: `Developer Notes
+================
+
+TODO:
+- Add more terminal commands
+- Improve file search
+- Add git integration
+- Add code snippets
+
+IDEAS:
+- Command history search
+- Multiple terminal tabs
+- File watcher
+- Auto-save improvements
+
+NOTES:
+- Terminal default directory: /rashbip
+- Use 'help' command for available commands
+- Tab completion works for commands and files`,
+    language: "text",
+  },
+  {
+    name: "skills.txt",
+    path: "/skills.txt",
+    icon: "text",
+    content: `Technical Skills
+===============
+
+Languages:
+- Kotlin (Android)
+- Dart (Flutter)
+- TypeScript/JavaScript
+- Java
+- Python
+
+Frameworks:
+- Android SDK
+- Jetpack Compose
+- Flutter
+- React/Next.js
+- Node.js
+
+Tools:
+- Git
+- Gradle
+- Docker
+- VS Code
+- Android Studio`,
+    language: "text",
   },
 ]

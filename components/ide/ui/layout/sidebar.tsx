@@ -516,6 +516,21 @@ export function Sidebar({ activeView, files, openFile, activeFile, onDeleteFile,
                     <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${settings.autoSave ? "left-5" : "left-0.5"}`} />
                   </button>
                 </div>
+
+                {/* Remember Last File Toggle */}
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-foreground">Remember Last File</span>
+                    <span className="text-xs text-muted-foreground ml-2">(reopen on load)</span>
+                  </div>
+                  <button
+                    onClick={() => updateSetting("rememberLastFile", !settings.rememberLastFile)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${settings.rememberLastFile ? "bg-primary" : "bg-secondary"}`}
+                    title="Toggle Remember Last File"
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${settings.rememberLastFile ? "left-5" : "left-0.5"}`} />
+                  </button>
+                </div>
               </div>
 
               {/* Divider */}
