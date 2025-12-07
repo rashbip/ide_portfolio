@@ -23,6 +23,7 @@ export type { FileType }
 
 
 import { IDEContext } from "./context/ide-context"
+import { createFile, createFolderMarker } from "./utils/file-management"
 
 
 const STORAGE_KEY_FILES = "ide_files"
@@ -191,43 +192,7 @@ export function IDE() {
 
   // Create File function - now accepts name from dialog or TitleBar
   const handleCreateFile = (name: string, parentPath?: string) => {
-    // Determine path
-    let path = `/${name}`
-    if (parentPath && typeof parentPath === 'string') {
-       // Remove trailing slash if present to avoid double slashes
-       let cleanParent = parentPath.endsWith('/') ? parentPath.slice(0, -1) : parentPath
-       
-       // Remove '/rashbip' prefix if present (Sidebar root issue)
-       if (cleanParent.startsWith('/rashbip')) {
-         cleanParent = cleanParent.replace('/rashbip', '')
-       }
-       
-       path = `${cleanParent}/${name}`
-    }
-
-    // Determine basic language based on extension
-    const ext = name.split('.').pop()?.toLowerCase() || ''
-    let language = "plaintext"
-    let icon = "web"
-    let isSpecial: "html-preview" | "dart-preview" | undefined
-
-    if (ext === "html") { language = "html"; icon = "html"; isSpecial = "html-preview" }
-    else if (ext === "css") { language = "css"; icon = "css" }
-    else if (ext === "js") { language = "javascript"; icon = "js" }
-    else if (ext === "dart") { language = "dart"; icon = "dart"; isSpecial = "dart-preview" }
-    else if (ext === "ts" || ext === "tsx") { language = "typescript"; icon = "web" }
-    else if (ext === "json") { language = "json"; icon = "config" }
-    else if (ext === "md") { language = "markdown"; icon = "markdown" }
-
-    const newFile: FileType = {
-      name,
-      path,
-      icon,
-      content: "",
-      language,
-      isSpecial
-    }
-
+    const newFile = createFile(name, parentPath)
     setAllFiles(prev => [...prev, newFile])
     openFile(newFile)
     addTerminalOutput(`Created file: ${name}`, "success")
@@ -422,33 +387,20 @@ export function IDE() {
 
   // Create folder - creates a hidden .keep file to represent the folder
   const handleCreateFolder = (folderPath: string) => {
-    // Map display path to actual file path
-    // The folderPath comes from sidebar like: /rashbip/web/newfolder
-    // We need to convert it to actual path like: /web/newfolder
-    const pathParts = folderPath.split('/').filter(Boolean)
-    
-    // Remove 'rashbip' from path if present (it's the display root)
-    if (pathParts[0] === 'rashbip') {
-      pathParts.shift()
+    const markerFile = createFolderMarker(folderPath)
+    if (!markerFile) {
+      showToast("Cannot create root folder", "error")
+      return
     }
     
-    // Create actual path (e.g., /web/newfolder)
-    const actualPath = '/' + pathParts.join('/')
+    const pathParts = folderPath.split('/').filter(Boolean)
     const folderName = pathParts[pathParts.length - 1] || 'New Folder'
+    const actualPath = markerFile.path.replace('/.keep', '')
     
     // Check if folder exists
     if (allFiles.some(f => f.path.startsWith(actualPath + '/'))) {
       showToast("Folder already exists", "error")
       return
-    }
-
-    // Create a hidden marker file to represent the folder
-    const markerFile: FileType = {
-      name: ".keep",
-      path: `${actualPath}/.keep`,
-      icon: "config",
-      content: "",
-      language: "plaintext"
     }
     
     setAllFiles(prev => [...prev, markerFile])
@@ -621,6 +573,20 @@ export function IDE() {
                 onTabChange={setActiveTerminalTab}
                 onClearOutputs={() => setTerminalOutputs([])}
                 onCommand={handleTerminalCommand}
+                files={allFiles}
+                onCreateFile={handleCreateFile}
+                onDeleteFile={(path) => {
+                  const file = allFiles.find(f => f.path === path)
+                  if (file) handleDeleteFile(file)
+                }}
+                onCreateFolder={handleCreateFolder}
+                onDeleteFolder={handleDeleteFolder}
+                onOpenFile={(path) => {
+                  const file = allFiles.find(f => f.path === path)
+                  if (file) openFile(file)
+                }}
+                getFileContent={(path) => getFileContent(allFiles.find(f => f.path === path) || { name: "", path: "", icon: "", content: "", language: "" } as FileType)}
+                onUpdateFileContent={(path, content) => updateFileContent(path, content)}
               />
             </div>
           </div>
@@ -882,16 +848,30 @@ export function IDE() {
               </div>
 
               {terminalOpen && (
-                <TerminalPanel
-                  onClose={() => setTerminalOpen(false)}
-                  height={terminalHeight}
-                  onHeightChange={setTerminalHeight}
-                  outputs={terminalOutputs}
-                  activeTab={activeTerminalTab}
-                  onTabChange={setActiveTerminalTab}
-                  onClearOutputs={() => setTerminalOutputs([])}
-                  onCommand={handleTerminalCommand}
-                />
+              <TerminalPanel
+                onClose={() => setTerminalOpen(false)}
+                height={terminalHeight}
+                onHeightChange={setTerminalHeight}
+                outputs={terminalOutputs}
+                activeTab={activeTerminalTab}
+                onTabChange={setActiveTerminalTab}
+                onClearOutputs={() => setTerminalOutputs([])}
+                onCommand={handleTerminalCommand}
+                files={allFiles}
+                onCreateFile={handleCreateFile}
+                onDeleteFile={(path) => {
+                  const file = allFiles.find(f => f.path === path)
+                  if (file) handleDeleteFile(file)
+                }}
+                onCreateFolder={handleCreateFolder}
+                onDeleteFolder={handleDeleteFolder}
+                onOpenFile={(path) => {
+                  const file = allFiles.find(f => f.path === path)
+                  if (file) openFile(file)
+                }}
+                getFileContent={(path) => getFileContent(allFiles.find(f => f.path === path) || { name: "", path: "", icon: "", content: "", language: "" } as FileType)}
+                onUpdateFileContent={(path, content) => updateFileContent(path, content)}
+              />
               )}
             </div>
           </div>

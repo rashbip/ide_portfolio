@@ -3,6 +3,8 @@
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { X, Maximize2, Minimize2, Plus, Ban, Trash2 } from "lucide-react"
+import { normalizeFilePath, getFilesInDirectory, pathExistsInFiles } from "../../utils/file-management"
+import { NanoEditor } from "./nano-editor"
 
 type HistoryEntry = {
   cmd: string
@@ -31,14 +33,23 @@ type Props = {
   onTabChange: (tab: "terminal" | "problems" | "output") => void
   onClearOutputs?: () => void
   onCommand?: (command: string) => void
+  files?: Array<{ name: string; path: string; icon: string; content: string; language: string; isSpecial?: "profile" | "html-preview" | "dart-preview" | "kotlin-viewer" | "profile-html" | "welcome" | "documentation" | "about" }>
+  onCreateFile?: (name: string, parentPath?: string) => void
+  onDeleteFile?: (path: string) => void
+  onCreateFolder?: (folderPath: string) => void
+  onDeleteFolder?: (folderPath: string) => void
+  onOpenFile?: (path: string) => void
+  getFileContent?: (path: string) => string
+  onUpdateFileContent?: (path: string, content: string) => void
 }
 
-export function TerminalPanel({ onClose, height, onHeightChange, outputs: externalOutputs, activeTab, onTabChange, onClearOutputs, onCommand }: Props) {
+export function TerminalPanel({ onClose, height, onHeightChange, outputs: externalOutputs, activeTab, onTabChange, onClearOutputs, onCommand, files = [], onCreateFile, onDeleteFile, onCreateFolder, onDeleteFolder, onOpenFile, getFileContent, onUpdateFileContent }: Props) {
   const [isResizing, setIsResizing] = useState(false)
-  const [sessions, setSessions] = useState<{ id: string; name: string; history: HistoryEntry[] }[]>([
+  const [sessions, setSessions] = useState<{ id: string; name: string; history: HistoryEntry[]; cwd: string }[]>([
     {
       id: "1",
       name: "bash",
+      cwd: "/rashbip",
       history: [
         {
           cmd: "",
@@ -54,6 +65,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   const [matrixMode, setMatrixMode] = useState(false)
+  const [nanoEditor, setNanoEditor] = useState<{ filePath: string; content: string } | null>(null)
 
   // existing problems state...
   const [problems, setProblems] = useState<Problem[]>([
@@ -66,6 +78,20 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
   const resizeRef = useRef<HTMLDivElement>(null)
 
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0]
+  const currentCwd = activeSession?.cwd || "/rashbip"
+
+  // Helper functions for file system
+  const normalizePath = (path: string): string => {
+    return normalizeFilePath(path, currentCwd)
+  }
+
+  const getFilesInDir = (dir: string): Array<{ name: string; path: string; isDir: boolean }> => {
+    return getFilesInDirectory(dir, files)
+  }
+
+  const pathExists = (path: string): boolean => {
+    return pathExistsInFiles(path, files)
+  }
 
   // Resize handling
   useEffect(() => {
@@ -146,6 +172,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
     setSessions([...sessions, {
       id: newId,
       name: sessions.length % 2 === 0 ? "zsh" : "bash",
+      cwd: "/rashbip",
       history: [{ cmd: "", output: <div className="text-muted-foreground">New terminal session.</div> }]
     }])
     setActiveSessionId(newId)
@@ -179,7 +206,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
     switch (command) {
       case "help":
         return (
-          <div className="space-y-1">
+          <div className="space-y-2">
             <div className="text-primary font-bold">Available Commands:</div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-sm">
               {availableCommands.map((c) => (
@@ -187,6 +214,18 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
                   {c}
                 </span>
               ))}
+            </div>
+            <div className="mt-4 pt-2 border-t border-border">
+              <div className="text-primary font-bold text-xs mb-1">File System:</div>
+              <div className="text-xs text-muted-foreground space-y-0.5">
+                <div>cd [dir] - Change directory (default: /rashbip)</div>
+                <div>ls [dir] - List files and directories</div>
+                <div>cat [file] - Display file contents</div>
+                <div>touch [file] - Create a new file</div>
+                <div>mkdir [dir] - Create a new directory</div>
+                <div>rm [file] - Remove a file</div>
+                <div>rm -r [dir] - Remove a directory</div>
+              </div>
             </div>
           </div>
         )
@@ -275,26 +314,63 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
         return <div className="text-foreground">{new Date().toString()}</div>
 
       case "pwd":
-        return <div className="text-foreground">/home/rashbip/dev</div>
+        return <div className="text-foreground">{currentCwd}</div>
 
       case "ls":
+        const targetDir = args[0] ? normalizePath(args[0]) : currentCwd
+        const items = getFilesInDir(targetDir)
+        if (items.length === 0) {
+          return <div className="text-muted-foreground">(empty directory)</div>
+        }
         return (
           <div className="flex flex-wrap gap-4">
-            <span className="text-blue-500">src/</span>
-            <span className="text-blue-500">lib/</span>
-            <span className="text-blue-500">profile/</span>
-            <span className="text-blue-500">build/</span>
-            <span className="text-foreground">README.md</span>
+            {items.map(item => (
+              <span key={item.path} className={item.isDir ? "text-blue-500" : "text-foreground"}>
+                {item.name}{item.isDir ? "/" : ""}
+              </span>
+            ))}
           </div>
         )
 
+      case "cd":
+        if (!args[0]) {
+          setSessions(prev => prev.map(s => 
+            s.id === activeSessionId ? { ...s, cwd: "/rashbip" } : s
+          ))
+          return <div className="text-foreground">Changed to /rashbip</div>
+        }
+        let newDir = normalizePath(args[0])
+        // If normalized path is /, map it back to /rashbip for display
+        if (newDir === "/") {
+          newDir = "/rashbip"
+        }
+        // Check if path exists (normalizePath already maps /rashbip to /)
+        const checkPath = newDir === "/rashbip" ? "/" : newDir
+        if (pathExists(checkPath) || newDir === "/rashbip") {
+          setSessions(prev => prev.map(s => 
+            s.id === activeSessionId ? { ...s, cwd: newDir } : s
+          ))
+          return <div className="text-foreground">Changed to {newDir}</div>
+        }
+        return <div className="text-red-500">cd: {args[0]}: No such file or directory</div>
+
       case "cat":
-        if (args[0] === "README.md") {
+        if (!args[0]) {
+          return <div className="text-red-500">cat: missing file operand</div>
+        }
+        let filePath = normalizePath(args[0])
+        // Map /rashbip paths to / for file lookup
+        const actualFilePath = filePath.startsWith("/rashbip/") ? filePath.replace("/rashbip", "") : (filePath === "/rashbip" ? "/" : filePath)
+        const file = files.find(f => f.path === actualFilePath)
+        if (file) {
+          const content = getFileContent ? getFileContent(actualFilePath) : file.content
           return (
-            <div className="text-muted-foreground"># rashbip - Not a portfolio. Just existing on the internet.</div>
+            <div className="text-foreground whitespace-pre-wrap font-mono text-xs">
+              {content || "(empty file)"}
+            </div>
           )
         }
-        return <div className="text-red-500">cat: {args[0] || "?"}: No such file</div>
+        return <div className="text-red-500">cat: {args[0]}: No such file</div>
 
       case "echo":
         return <div className="text-foreground">{args.join(" ")}</div>
@@ -394,21 +470,90 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
         return <div className="text-red-500">Nice try. You don't have sudo privileges here.</div>
 
       case "rm":
-        if (args.includes("-rf") && args.includes("/")) {
-          return <div className="text-red-500">Nice try! System protected.</div>
+        if (!args[0]) {
+          return <div className="text-red-500">rm: missing operand</div>
         }
-        return <div className="text-red-500">rm: cannot remove: Permission denied</div>
-
-      case "cd":
-        return <div className="text-muted-foreground">You're already home.</div>
+        let rmPath = normalizePath(args[0])
+        // Map /rashbip paths to / for file lookup
+        const actualRmPath = rmPath.startsWith("/rashbip/") ? rmPath.replace("/rashbip", "") : (rmPath === "/rashbip" ? "/" : rmPath)
+        const rmFile = files.find(f => f.path === actualRmPath)
+        if (rmFile) {
+          if (rmFile.isSpecial === "profile" || rmFile.isSpecial === "profile-html") {
+            return <div className="text-red-500">rm: cannot remove '{args[0]}': Protected file</div>
+          }
+          onDeleteFile?.(actualRmPath)
+          return <div className="text-green-500">Removed {args[0]}</div>
+        }
+        // Check if it's a folder - look for .keep file or any files inside
+        const hasKeepFile = files.some(f => f.path === actualRmPath + "/.keep")
+        const folderFiles = files.filter(f => f.path.startsWith(actualRmPath + "/") && f.path !== actualRmPath + "/.keep")
+        if (hasKeepFile || folderFiles.length > 0) {
+          if (args.includes("-r") || args.includes("-rf")) {
+            // Delete the .keep file if it exists
+            if (hasKeepFile) {
+              const keepFile = files.find(f => f.path === actualRmPath + "/.keep")
+              if (keepFile) {
+                onDeleteFile?.(actualRmPath + "/.keep")
+              }
+            }
+            // Delete all files in the folder
+            folderFiles.forEach(f => {
+              if (f.isSpecial !== "profile" && f.isSpecial !== "profile-html") {
+                onDeleteFile?.(f.path)
+              }
+            })
+            onDeleteFolder?.(actualRmPath)
+            return <div className="text-green-500">Removed directory {args[0]}</div>
+          }
+          return <div className="text-red-500">rm: {args[0]}: is a directory (use -r flag)</div>
+        }
+        return <div className="text-red-500">rm: {args[0]}: No such file or directory</div>
 
       case "mkdir":
+        if (!args[0]) {
+          return <div className="text-red-500">mkdir: missing operand</div>
+        }
+        const mkdirPath = normalizePath(args[0])
+        if (pathExists(mkdirPath)) {
+          return <div className="text-red-500">mkdir: {args[0]}: File or directory exists</div>
+        }
+        // Pass the full path including /rashbip if we're in /rashbip
+        onCreateFolder?.(mkdirPath)
+        return <div className="text-green-500">Created directory {args[0]}</div>
+
       case "touch":
-        return <div className="text-muted-foreground">Read-only filesystem. This is a portfolio, not a real OS.</div>
+        if (!args[0]) {
+          return <div className="text-red-500">touch: missing file operand</div>
+        }
+        const fileName = args[0].split("/").pop() || args[0]
+        const touchPath = normalizePath(args[0])
+        if (files.some(f => f.path === touchPath)) {
+          return <div className="text-muted-foreground">File {args[0]} already exists</div>
+        }
+        // Pass the full path as parentPath so it's created in the right location
+        onCreateFile?.(fileName, currentCwd)
+        return <div className="text-green-500">Created file {args[0]}</div>
 
       case "vim":
+        return <div className="text-muted-foreground">Vim not available. Use 'nano' or IDE tabs instead.</div>
+
       case "nano":
-        return <div className="text-muted-foreground">Editor not available. Use the IDE tabs instead.</div>
+        if (!args[0]) {
+          return <div className="text-red-500">nano: missing file operand</div>
+        }
+        let nanoPath = normalizePath(args[0])
+        // Map /rashbip paths to / for file lookup
+        const actualNanoPath = nanoPath.startsWith("/rashbip/") ? nanoPath.replace("/rashbip", "") : (nanoPath === "/rashbip" ? "/" : nanoPath)
+        const nanoFile = files.find(f => f.path === actualNanoPath)
+        if (nanoFile) {
+          const fileContent = getFileContent ? getFileContent(actualNanoPath) : nanoFile.content
+          setNanoEditor({ filePath: actualNanoPath, content: fileContent || "" })
+          return null // Don't show output, editor will take over
+        }
+        // File doesn't exist - create it
+        const newNanoPath = actualNanoPath
+        setNanoEditor({ filePath: newNanoPath, content: "" })
+        return null
 
       case "code":
       case "enter":
@@ -487,6 +632,44 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
   const warningCount = problems.filter((p) => p.type === "warning").length
 
 
+
+  // If nano editor is open, show it instead of terminal
+  if (nanoEditor) {
+    return (
+      <div
+        className="flex flex-col border-t border-border animate-slide-in-up"
+        style={{ height, background: "var(--sidebar-bg)" }}
+      >
+        <NanoEditor
+          filePath={nanoEditor.filePath}
+          content={nanoEditor.content}
+          onSave={(content) => {
+            onUpdateFileContent?.(nanoEditor.filePath, content)
+            // Create file if it doesn't exist
+            if (!files.some(f => f.path === nanoEditor.filePath)) {
+              const fileName = nanoEditor.filePath.split('/').pop() || 'untitled'
+              onCreateFile?.(fileName, nanoEditor.filePath.substring(0, nanoEditor.filePath.lastIndexOf('/')))
+            }
+            setNanoEditor(null)
+            // Add to terminal history
+            setSessions(prev => prev.map(s => {
+              if (s.id === activeSessionId) {
+                return {
+                  ...s,
+                  history: [...s.history, {
+                    cmd: `nano ${nanoEditor.filePath.split('/').pop()}`,
+                    output: <div className="text-green-500">File saved: {nanoEditor.filePath}</div>
+                  }]
+                }
+              }
+              return s
+            }))
+          }}
+          onClose={() => setNanoEditor(null)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div
@@ -617,7 +800,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
                     <span className="text-primary">rashbip</span>
                     <span className="text-muted-foreground">@</span>
                     <span className="text-red-500">dev</span>
-                    <span className="text-muted-foreground">:~$</span>
+                    <span className="text-muted-foreground">:{activeSession.cwd}$</span>
                     <span className="text-foreground">{entry.cmd}</span>
                   </div>
                 )}
@@ -629,7 +812,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
               <span className="text-primary">rashbip</span>
               <span className="text-muted-foreground">@</span>
               <span className="text-red-500">dev</span>
-              <span className="text-muted-foreground">:~$</span>
+              <span className="text-muted-foreground">:{currentCwd}$</span>
               <input
                 ref={inputRef}
                 type="text"
