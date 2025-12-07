@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react"
 import { X, Maximize2, Minimize2, Plus, Ban, Trash2 } from "lucide-react"
 import { normalizeFilePath, getFilesInDirectory, pathExistsInFiles } from "../../utils/file-management"
 import { NanoEditor } from "./nano-editor"
+import { LinkRenderer } from "./link-renderer"
 
 type HistoryEntry = {
   cmd: string
@@ -442,7 +443,100 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
         return <div className="text-muted-foreground">Usage: git [status|log|commit|push|pull]</div>
 
       case "npm":
-        return <div className="text-muted-foreground">This is a mobile dev environment. Try 'flutter' or 'gradle'.</div>
+        if (!args[0]) {
+          return (
+            <div className="space-y-1">
+              <div className="text-foreground">npm &lt;command&gt;</div>
+              <div className="text-muted-foreground">Available commands: install, run, start, build, dev</div>
+            </div>
+          )
+        }
+
+        const npmCommand = args[0].toLowerCase()
+
+        if (npmCommand === "install" || npmCommand === "i") {
+          return (
+            <div className="space-y-1">
+              <div className="text-foreground">added 245 packages in 15s</div>
+              <div className="text-green-500">✓ Dependencies installed successfully</div>
+            </div>
+          )
+        }
+
+        if (npmCommand === "run") {
+          const script = args[1]?.toLowerCase()
+          if (script === "build") {
+            return (
+              <div className="space-y-1">
+                <div className="text-foreground">{"> "}next build</div>
+                <div className="text-foreground">Creating an optimized production build...</div>
+                <div className="text-foreground">✓ Compiled successfully</div>
+                <div className="text-foreground">Collecting page data...</div>
+                <div className="text-foreground">✓ Generating static pages (3/3)</div>
+                <div className="text-green-500">✓ Build completed in 2.3s</div>
+                <div className="text-primary mt-2">🌐 Website available on:</div>
+                <div className="text-foreground ml-4">Network: <span className="text-primary">rashidul.is-a.dev</span></div>
+                <div className="text-foreground ml-4">Local: <span className="text-primary">rashbip.github.io</span></div>
+              </div>
+            )
+          }
+          if (script === "dev") {
+            return (
+              <div className="space-y-1">
+                <div className="text-foreground">{"> "}next dev</div>
+                <div className="text-green-500">✓ Ready in 1.2s</div>
+                <div className="text-primary">○ Local: http://localhost:3000</div>
+                <div className="text-primary mt-2">🌐 Website available on:</div>
+                <div className="text-foreground ml-4">Network: <span className="text-primary">rashidul.is-a.dev</span></div>
+                <div className="text-foreground ml-4">Local: <span className="text-primary">rashbip.github.io</span></div>
+              </div>
+            )
+          }
+          if (script === "start") {
+            return (
+              <div className="space-y-1">
+                <div className="text-foreground">{"> "}next start</div>
+                <div className="text-green-500">✓ Server started</div>
+                <div className="text-primary">○ Local: http://localhost:3000</div>
+                <div className="text-primary mt-2">🌐 Website available on:</div>
+                <div className="text-foreground ml-4">Network: <span className="text-primary">rashidul.is-a.dev</span></div>
+                <div className="text-foreground ml-4">Local: <span className="text-primary">rashbip.github.io</span></div>
+              </div>
+            )
+          }
+          return <div className="text-muted-foreground">npm run {script || "&lt;script&gt;"} - Script not found or not implemented</div>
+        }
+
+        if (npmCommand === "build") {
+          return (
+            <div className="space-y-1">
+              <div className="text-foreground">{"> "}next build</div>
+              <div className="text-foreground">Creating an optimized production build...</div>
+              <div className="text-foreground">✓ Compiled successfully</div>
+              <div className="text-foreground">Collecting page data...</div>
+              <div className="text-foreground">✓ Generating static pages (3/3)</div>
+              <div className="text-green-500">✓ Build completed in 2.3s</div>
+              <div className="text-primary mt-2">🌐 Website available on:</div>
+              <div className="text-foreground ml-4">Network: <span className="text-primary">rashidul.is-a.dev</span></div>
+              <div className="text-foreground ml-4">Local: <span className="text-primary">rashbip.github.io</span></div>
+            </div>
+          )
+        }
+
+        if (npmCommand === "dev" || npmCommand === "start") {
+          return (
+            <div className="space-y-1">
+              <div className="text-foreground">{"> "}next {npmCommand}</div>
+              <div className="text-green-500">✓ Ready in 1.2s</div>
+              <div className="text-primary">○ Local: http://localhost:3000</div>
+              <div className="text-primary mt-2">🌐 Website available on:</div>
+              <div className="text-foreground ml-4">Network: <span className="text-primary">rashidul.is-a.dev</span></div>
+              <div className="text-foreground ml-4">Local: <span className="text-primary">rashbip.github.io</span></div>
+            </div>
+          )
+        }
+
+        return <div className="text-muted-foreground">npm {npmCommand} - Command not implemented. Try: install, run, build, dev, start</div>
 
       case "coffee":
         return (
@@ -527,11 +621,16 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
         }
         const fileName = args[0].split("/").pop() || args[0]
         const touchPath = normalizePath(args[0])
-        if (files.some(f => f.path === touchPath)) {
+        // Map /rashbip paths to / for file lookup
+        const actualTouchPath = touchPath.startsWith("/rashbip/") ? touchPath.replace("/rashbip", "") : (touchPath === "/rashbip" ? "/" : touchPath)
+        if (files.some(f => f.path === actualTouchPath)) {
           return <div className="text-muted-foreground">File {args[0]} already exists</div>
         }
-        // Pass the full path as parentPath so it's created in the right location
-        onCreateFile?.(fileName, currentCwd)
+        // Extract parent directory from the normalized path
+        const parentDir = actualTouchPath.substring(0, actualTouchPath.lastIndexOf('/')) || '/'
+        // If parentDir is empty or just '/', use currentCwd (mapped if needed)
+        const parentPath = parentDir === '/' ? (currentCwd === '/rashbip' ? '/' : currentCwd) : parentDir
+        onCreateFile?.(fileName, parentPath)
         return <div className="text-green-500">Created file {args[0]}</div>
 
       case "vim":
@@ -804,7 +903,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
                     <span className="text-foreground">{entry.cmd}</span>
                   </div>
                 )}
-                <div className="pl-0 mt-1">{entry.output}</div>
+                <div className="pl-0 mt-1"><LinkRenderer text={entry.output} /></div>
               </div>
             ))}
 
@@ -870,7 +969,7 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
                           : "text-foreground"
                       }`}
                   >
-                    {output.message}
+                    <LinkRenderer text={output.message} />
                   </pre>
                 </div>
               ))}
