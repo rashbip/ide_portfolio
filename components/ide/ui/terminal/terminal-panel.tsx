@@ -431,7 +431,19 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
         )
 
       case "git":
-        if (args[0] === "status") {
+        if (!args[0]) {
+          return (
+            <div className="space-y-1">
+              <div className="text-foreground">usage: git &lt;command&gt; [&lt;args&gt;]</div>
+              <div className="text-muted-foreground mt-2">Available commands:</div>
+              <div className="text-muted-foreground ml-4">status, log, commit, push, pull, remote, config, branch, clone</div>
+            </div>
+          )
+        }
+
+        const gitCommand = args[0].toLowerCase()
+
+        if (gitCommand === "status") {
           return (
             <div className="space-y-1">
               <div>On branch main</div>
@@ -440,7 +452,159 @@ export function TerminalPanel({ onClose, height, onHeightChange, outputs: extern
             </div>
           )
         }
-        return <div className="text-muted-foreground">Usage: git [status|log|commit|push|pull]</div>
+
+        if (gitCommand === "log") {
+          const lines = args[1] === "--oneline" ? 10 : 5
+          return (
+            <div className="space-y-1 font-mono text-xs">
+              {Array.from({ length: lines }).map((_, i) => (
+                <div key={i} className="text-foreground">
+                  {i === 0 ? "*" : " "} {String(Math.random()).substring(2, 10)} {i === 0 ? "(HEAD -> main)" : ""} Initial commit
+                </div>
+              ))}
+            </div>
+          )
+        }
+
+        if (gitCommand === "commit") {
+          if (args[1] === "-m" && args[2]) {
+            return (
+              <div className="space-y-1">
+                <div className="text-foreground">[main {String(Math.random()).substring(2, 8)}] {args[2]}</div>
+                <div className="text-green-500">1 file changed, 0 insertions(+), 0 deletions(-)</div>
+              </div>
+            )
+          }
+          return <div className="text-muted-foreground">Usage: git commit -m &quot;&lt;message&gt;&quot;</div>
+        }
+
+        if (gitCommand === "push") {
+          return (
+            <div className="space-y-1">
+              <div className="text-foreground">Enumerating objects: 5, done.</div>
+              <div className="text-foreground">Counting objects: 100% (5/5), done.</div>
+              <div className="text-foreground">Writing objects: 100% (3/3), done.</div>
+              <div className="text-green-500">To https://github.com/rashbip/portfolio.git</div>
+              <div className="text-green-500">   abc1234..def5678  main -&gt; main</div>
+            </div>
+          )
+        }
+
+        if (gitCommand === "pull") {
+          return (
+            <div className="space-y-1">
+              <div className="text-foreground">From https://github.com/rashbip/portfolio</div>
+              <div className="text-green-500">Already up to date.</div>
+            </div>
+          )
+        }
+
+        if (gitCommand === "remote") {
+          if (args[1] === "-v") {
+            return (
+              <div className="space-y-1">
+                <div className="text-foreground">origin  https://github.com/rashbip/portfolio.git (fetch)</div>
+                <div className="text-foreground">origin  https://github.com/rashbip/portfolio.git (push)</div>
+              </div>
+            )
+          }
+          if (args[1] === "add" && args[2] && args[3]) {
+            return (
+              <div className="text-green-500">
+                Remote '{args[2]}' added. URL: {args[3]}
+              </div>
+            )
+          }
+          if (args[1] === "remove" && args[2]) {
+            return (
+              <div className="text-green-500">
+                Remote '{args[2]}' removed.
+              </div>
+            )
+          }
+          return (
+            <div className="space-y-1">
+              <div className="text-foreground">origin</div>
+              <div className="text-muted-foreground">Usage: git remote [-v|add|remove] [name] [url]</div>
+            </div>
+          )
+        }
+
+        if (gitCommand === "config") {
+          if (args[1] === "--global" && args[2] === "user.name") {
+            if (args[3]) {
+              return <div className="text-green-500">Config set: user.name = {args[3]}</div>
+            }
+            return <div className="text-foreground">rashbip</div>
+          }
+          if (args[1] === "--global" && args[2] === "user.email") {
+            if (args[3]) {
+              return <div className="text-green-500">Config set: user.email = {args[3]}</div>
+            }
+            return <div className="text-foreground">dev@rashbip.com</div>
+          }
+          if (args[1] === "user.name") {
+            if (args[2]) {
+              return <div className="text-green-500">Config set: user.name = {args[2]}</div>
+            }
+            return <div className="text-foreground">rashbip</div>
+          }
+          if (args[1] === "user.email") {
+            if (args[2]) {
+              return <div className="text-green-500">Config set: user.email = {args[2]}</div>
+            }
+            return <div className="text-foreground">dev@rashbip.com</div>
+          }
+          if (args[1] === "--list" || args[1] === "-l") {
+            return (
+              <div className="space-y-1 font-mono text-xs">
+                <div className="text-foreground">user.name=rashbip</div>
+                <div className="text-foreground">user.email=dev@rashbip.com</div>
+                <div className="text-foreground">core.editor=code</div>
+                <div className="text-foreground">init.defaultBranch=main</div>
+              </div>
+            )
+          }
+          return <div className="text-muted-foreground">Usage: git config [--global] [user.name|user.email|--list] [value]</div>
+        }
+
+        if (gitCommand === "branch") {
+          if (args[1] === "-a" || args[1] === "--all") {
+            return (
+              <div className="space-y-1">
+                <div className="text-primary">* main</div>
+                <div className="text-muted-foreground">  remotes/origin/main</div>
+              </div>
+            )
+          }
+          return (
+            <div className="space-y-1">
+              <div className="text-primary">* main</div>
+            </div>
+          )
+        }
+
+        if (gitCommand === "clone") {
+          if (args[1]) {
+            return (
+              <div className="space-y-1">
+                <div className="text-foreground">Cloning into '{args[1].split('/').pop()?.replace('.git', '') || 'repository'}'...</div>
+                <div className="text-green-500">remote: Enumerating objects: 100, done.</div>
+                <div className="text-green-500">remote: Counting objects: 100% (100/100), done.</div>
+                <div className="text-green-500">Receiving objects: 100% (100/100), done.</div>
+                <div className="text-green-500">Resolving deltas: 100% (50/50), done.</div>
+              </div>
+            )
+          }
+          return <div className="text-muted-foreground">Usage: git clone &lt;repository-url&gt;</div>
+        }
+
+        // Check for username-related commands
+        if (gitCommand === "whoami" || (args[0] === "config" && args[1] === "user.name" && !args[2])) {
+          return <div className="text-foreground">rashbip</div>
+        }
+
+        return <div className="text-muted-foreground">git: '{gitCommand}' is not a git command. See 'git --help'.</div>
 
       case "npm":
         if (!args[0]) {
